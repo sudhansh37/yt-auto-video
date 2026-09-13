@@ -1,0 +1,47 @@
+name: Daily YouTube Video
+
+on:
+  schedule:
+    # Har roz subah 10:00 IST (IST = UTC+5:30, so 4:30 UTC)
+    - cron: '30 4 * * *'
+  workflow_dispatch:  # Manual trigger ke liye (Actions tab se dabao)
+
+jobs:
+  generate-and-upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+
+      - name: Install Python packages
+        run: |
+          pip install --quiet edge-tts mutagen requests Pillow imageio-ffmpeg
+
+      - name: Generate video and upload to YouTube
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          VOICE: hi-IN-MadhurNeural
+        run: python generate_and_upload.py
+
+      - name: Upload video as artifact (backup)
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-video
+          path: final_video.mp4
+          retention-days: 7
