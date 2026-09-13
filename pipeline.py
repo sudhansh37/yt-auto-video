@@ -32,8 +32,15 @@ TRANSITIONS = ["fade", "slideleft", "slideright", "slideup", "circleopen", "wipe
 
 
 def generate_scenes(topic, api_key, num_scenes=6):
-    """Gemini API se script likhwata hai"""
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    """Gemini API se script likhwata hai - multiple models try karta hai"""
+    
+    # Multiple model names try karo (Google names change karta hai)
+    models = [
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+        "gemini-2.0-flash-001",
+        "gemini-flash-latest",
+    ]
     
     prompt = f"""You are a professional YouTube Shorts script writer.
 Write an engaging script about: "{topic}"
@@ -60,16 +67,47 @@ Return ONLY a valid JSON array, no markdown:
         }
     }
 
-    response = requests.post(url, json=data, timeout=30)
-    result = response.json()
-    text = result["candidates"][0]["content"]["parts"][0]["text"]
+    last_error = ""
+    for model_name in models:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+        print(f"   Trying model: {model_name}...")
+        
+        try:
+            response = requests.post(url, json=data, timeout=30)
+            result = response.json()
+            
+            # Check for error response
+            if "error" in result:
+                error_msg = result["error"].get("message", "Unknown error")
+                error_code = result["error"].get("code", "?")
+                print(f"   -> Error {error_code}: {error_msg[:200]}")
+                last_error = f"Model {model_name}: {error_msg}"
+                continue
+            
+            # Check for candidates
+            if "candidates" not in result:
+                print(f"   -> No 'candidates' in response. Full response: {str(result)[:300]}")
+                last_error = f"Model {model_name}: No candidates in response"
+                continue
+            
+            text = result["candidates"][0]["content"]["parts"][0]["text"]
+            print(f"   -> Success with {model_name}!")
+            
+            text = text.strip()
+            if text.startswith("```"):
+                text = text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+            
+            scenes = json.loads(text)
+            return scenes
+            
+        except Exception as e:
+            print(f"   -> Exception: {e}")
+            last_error = f"Model {model_name}: {str(e)}"
+            continue
     
-    text = text.strip()
-    if text.startswith("```"):
-        text = text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-    
-    scenes = json.loads(text)
-    return scenes
+    # All models failed
+    raise Exception(f"Gemini API se script nahi ban paya. Last error: {last_error}\n"
+                     f"Check karo: API key sahi hai ya nahi? aistudio.google.com/apikey")
 
 
 def generate_image(prompt, hf_token, idx, output_dir):
@@ -177,7 +215,7 @@ def concat_audio(audio_paths, output_path):
         for ap in audio_paths:
             f.write(f"file '{ap}'\n")
     cmd = [FFMPEG, "-y", "-f", "concat", "-safe", "0", "-i", list_file,
-           "-c:a", "libpm3lame", "-b:a", "128k", output_path]
+           "-c:a", "libmp3lame", "-b:a", "128k", output_path]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
     if result.returncode != 0:
         cmd_copy = [FFMPEG, "-y", "-f", "concat", "-safe", "0", "-i", list_file,
