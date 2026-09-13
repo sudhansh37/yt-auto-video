@@ -36,10 +36,10 @@ def generate_scenes(topic, api_key, num_scenes=6):
     
     # Multiple model names try karo (Google names change karta hai)
     models = [
-        "gemini-2.0-flash",
-        "gemini-1.5-flash",
-        "gemini-2.0-flash-001",
+        "gemini-3.6-flash",
         "gemini-flash-latest",
+        "gemini-3.5-flash",
+        "gemini-2.5-flash",
     ]
     
     prompt = f"""You are a professional YouTube Shorts script writer.
@@ -53,7 +53,7 @@ Rules:
 - image_prompt should be in English, describing a visual that matches the narration
 - Make it engaging, fast-paced, and informative
 
-Return ONLY a valid JSON array, no markdown:
+ReTURN ONLY a valid JSON array, no markdown:
 [
   {{"narration": "Namaste dosto...", "image_prompt": "Indian person waving, bright background"}},
   ...
@@ -81,6 +81,23 @@ Return ONLY a valid JSON array, no markdown:
                 error_msg = result["error"].get("message", "Unknown error")
                 error_code = result["error"].get("code", "?")
                 print(f"   -> Error {error_code}: {error_msg[:200]}")
+                
+                # 503 = high demand, retry after waiting
+                if error_code == 503:
+                    import time
+                    print(f"   -> Waiting 15 sec and retrying...")
+                    time.sleep(15)
+                    response = requests.post(url, json=data, timeout=30)
+                    result = response.json()
+                    if "candidates" in result:
+                        text = result["candidates"][0]["content"]["parts"][0]["text"]
+                        print(f"   -> Success with {model_name} (after retry)!")
+                        text = text.strip()
+                        if text.startswith("```"):
+                            text = text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                        scenes = json.loads(text)
+                        return scenes
+                
                 last_error = f"Model {model_name}: {error_msg}"
                 continue
             
