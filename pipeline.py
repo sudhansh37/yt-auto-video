@@ -128,40 +128,35 @@ ReTURN ONLY a valid JSON array, no markdown:
 
 
 def generate_image(prompt, hf_token, idx, output_dir):
-    """HF Inference API se image banata hai"""
-    api_url = "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell"
-    headers = {"Authorization": f"Bearer {hf_token}"}
+    """Pollinations.ai se image banata hai (free, no API key needed)"""
+    import urllib.parse
     
-    payload = {
-        "inputs": prompt + ", high quality, cinematic lighting, 4k, detailed",
-        "parameters": {
-            "width": 768,
-            "height": 1344,
-            "num_inference_steps": 4,
-            "guidance_scale": 0.0
-        }
-    }
-
+    # Pollinations.ai - free image generation, no API key
+    enhanced_prompt = prompt + ", high quality, cinematic lighting, 4k, detailed, vibrant colors"
+    encoded_prompt = urllib.parse.quote(enhanced_prompt)
+    seed = random.randint(1, 999999)
+    
+    url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=768&height=1344&nologo=true&seed={seed}"
+    
     for attempt in range(3):
         try:
-            response = requests.post(api_url, headers=headers, json=payload, timeout=60)
-            if response.status_code == 200:
+            print(f"      Pollinations attempt {attempt+1}...")
+            response = requests.get(url, timeout=60)
+            if response.status_code == 200 and 'image' in response.headers.get('Content-Type', ''):
                 image = Image.open(BytesIO(response.content))
                 image_path = os.path.join(output_dir, f"scene_{idx}.png")
                 image.save(image_path)
                 return image_path
-            elif response.status_code == 503:
-                import time
-                time.sleep(10)
             else:
+                print(f"      Status: {response.status_code}")
                 import time
                 time.sleep(5)
         except Exception as e:
-            print(f"Image error (attempt {attempt+1}): {e}")
+            print(f"      Error: {e}")
             import time
             time.sleep(5)
     
-    # Fallback: colored placeholder
+    print(f"      Using placeholder image")
     colors = [(30, 60, 120), (120, 30, 60), (60, 120, 30), (120, 60, 30)]
     img = Image.new("RGB", (768, 1344), color=colors[idx % len(colors)])
     image_path = os.path.join(output_dir, f"scene_{idx}.png")
@@ -232,7 +227,7 @@ def concat_audio(audio_paths, output_path):
         for ap in audio_paths:
             f.write(f"file '{ap}'\n")
     cmd = [FFMPEG, "-y", "-f", "concat", "-safe", "0", "-i", list_file,
-           "-c:a", "libmp3lame", "-b:a", "128k", output_path]
+           "-c:a", "libpm3lame", "-b:a", "128k", output_path]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
     if result.returncode != 0:
         cmd_copy = [FFMPEG, "-y", "-f", "concat", "-safe", "0", "-i", list_file,
@@ -245,7 +240,11 @@ def concat_audio(audio_paths, output_path):
 
 
 def merge_clips_with_audio(video_clips, audio_path, output_path):
-    """Video clips xfade merge + audio add"""
+    """Video clips ko merge karta hai + audio add karta hai (simple approach)"""
+    
+    # Approach 1: Simple concat demuxer (most reliable)
+    # Create a list file and concat all clips, then add audio
+    
     if len(video_clips) == 1:
         cmd = [FFMPEG, "-y", "-i", video_clips[0], "-i", audio_path,
                "-c:v", "libx264", "-preset", "ultrafast",
@@ -254,103 +253,80 @@ def merge_clips_with_audio(video_clips, audio_path, output_path):
         subprocess.run(cmd, capture_output=True, text=True, timeout=180)
         return
 
-    durations = []
-    for cp in video_clips:
-        result = subprocess.run([FFMPEG, "-i", cp], capture_output=True, text=True, timeout=30)
-        match = re.search(r"Duration: (\d+):(\d+):(\d+\.\d+)", result.stderr)
-        if match:
-            h, m, s = match.groups()
-            durations.append(int(h) * 3600 + int(m) * 60 + float(s))
-        else:
-            durations.append(5.0)
-
-    xfade_duration = 0.5
-
-    if len(video_clips) == 2:
-        offset = durations[0] - xfade_duration
-        transition = random.choice(TRANSITIONS)
-        xfade_video = output_path + "_xfade.mp4"
-        cmd = [FFMPEG, "-y", "-i", video_clips[0], "-i", video_clips[1],
-               "-filter_complex", f"xfade=transition={transition}:duration={xfade_duration}:offset={offset}",
-               "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-an", xfade_video]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
-        if result.returncode == 0:
-            cmd_audio = [FFMPEG, "-y", "-i", xfade_video, "-i", audio_path,
-                         "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", "-shortest", output_path]
-            subprocess.run(cmd_audio, capture_output=True, text=True, timeout=120)
-            os.remove(xfade_video)
-        else:
-            _fallback_merge(video_clips, audio_path, output_path)
-        return
-
-    # 3+ clips
-    inputs = []
-    for cp in video_clips:
-        inputs.extend(["-i", cp])
     
-    filter_parts = []
-    prev_label = "0:v"
-    accumulated_duration = 0
-    for i in range(1, len(video_clips)):
-        offset = accumulated_duration + durations[i-1] - xfade_duration
-        transition = random.choice(TRANSITIONS)
-        out_label = f"v{i}"
-        if i == 1:
-            filter_parts.append(f"[0:v][1:v]xfade=transition={transition}:duration={xfade_duration}:offset={offset}[{out_label}]")
-        else:
-            filter_parts.append(f"[{prev_label}][{i}:v]xfade=transition={transition}:duration={xfade_duration}:offset={offset}[{out_label}]")
-        prev_label = out_label
-        accumulated_duration = offset
-
-    filter_complex = ";".join(filter_parts)
-    xfade_video = output_path + "_xfade.mp4"
-    cmd = [FFMPEG, "-y", *inputs, "-filter_complex", filter_complex,
-           "-map", f"[{prev_label}]", "-c:v", "libx264", "-preset", "ultrafast",
-           "-pix_fmt", "yuv420p", "-an", xfade_video]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    # Step 1: Concat all video clips using demuxer (no re-encode)
+    list_file = output_path + "_list.txt"
+    with open(list_file, "w") as f:
+        for cp in video_clips:
+            f.write(f"file '{cp}'\n")
     
-    if result.returncode == 0:
-        cmd_audio = [FFMPEG, "-y", "-i", xfade_video, "-i", audio_path,
-                     "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", "-shortest", output_path]
-        subprocess.run(cmd_audio, capture_output=True, text=True, timeout=120)
-        os.remove(xfade_video)
-    else:
-        print(f"Xfade error, using fallback...")
-        _fallback_merge(video_clips, audio_path, output_path)
-
-
-def _fallback_merge(video_clips, audio_path, output_path):
-    """Filter-based concat + audio"""
-    n = len(video_clips)
-    inputs = []
-    for cp in video_clips:
-        inputs.extend(["-i", cp])
-    inputs.extend(["-i", audio_path])
-    audio_idx = n
-    video_labels = "".join([f"[{i}:v]" for i in range(n)])
-    filter_complex = f"{video_labels}concat=n={n}:v=1:a=0[vout]"
+    merged_video = output_path + "_merged.mp4"
+    cmd_concat = [FFMPEG, "-y", "-f", "concat", "-safe", "0", "-i", list_file,
+              "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p",
+              "-an", merged_video]
+    result = subprocess.run(cmd_concat, capture_output=True, text=True, timeout=300)
     
-    cmd = [FFMPEG, "-y", *inputs, "-filter_complex", filter_complex,
-           "-map", "[vout]", "-map", f"{audio_idx}:a",
-           "-c:v", "libx264", "-preset", "ultrafast",
+    try:
+        os.remove(list_file)
+    except:
+        pass
+    
+    if result.returncode == 0 and os.path.exists(merged_video):
+        # Step 2: Add audio to merged video
+        cmd_audio = [FFMPEG, "-y", "-i", merged_video, "-i", audio_path,
+                     "-c:v", "copy", "-c:a", "aac", "-b:a", "128k",
+                    "-shortest", output_path]
+        result2 = subprocess.run(cmd_audio, capture_output=True, text=True, timeout=120)
+        os.remove(merged_video)
+        
+        if result2.returncode == 0 and os.path.exists(output_path):
+            print("   -> Merge successful (concat + audio)")
+            return
+    
+    # Step 3: Fallback - try xfade with pairs (2 clips at a time)
+    print("   -> Concat failed, trying pairwise merge...")
+    _pairwise_merge(video_clips, audio_path, output_path)
+
+
+def _pairwise_merge(video_clips, audio_path, output_path):
+    """Fallback: clips ko 2-2 karke merge karo"""
+    
+    # Step 1: Add each scene's audio to its clip, creating complete clips
+    print("   -> Adding audio to each clip...")
+    full_clips = []
+    for i, (cp, ap) in enumerate(zip(video_clips, [])):
+        full_clip = output_path + f"_full_{i}.mp4"
+        cmd = [FFMPEG, "-y", "-i", cp, "-i", audio_path,
+               "-c:v", "copy", "-c:a", "aac", "-b:a", "128k",
+               "-shortest", full_clip]
+        subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    
+    # Step 2: Simple concat demuxer with re-encode
+    list_file = output_path + "_pairlist.txt"
+    with open(list_file, "w") as f:
+        for i in range(len(video_clips)):
+            f.write(f"file '{video_clips[i]}'\n")
+    
+    cmd = [FFMPEG, "-y", "-f", "concat", "-safe", "0", "-i", list_file,
+           "-i", audio_path,
+            "-c:v", "libx264", "-preset", "ultrafast",
            "-c:a", "aac", "-b:a", "128k", "-pix_fmt", "yuv420p",
-           "-shortest", output_path]
+            "-shortest", output_path]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    
+    try:
+        os.remove(list_file)
+    except:
+        pass
+    
     if result.returncode != 0:
-        # Last resort: concat demuxer
-        list_file = output_path + "_list.txt"
-        with open(list_file, "w") as f:
-            for cp in video_clips:
-                f.write(f"file '{cp}'\n")
-        cmd2 = [FFMPEG, "-y", "-f", "concat", "-safe", "0", "-i", list_file,
-                "-i", audio_path, "-c:v", "libx264", "-preset", "ultrafast",
-                "-c:a", "aac", "-b:a", "128k", "-pix_fmt", "yuv420p",
-                "-shortest", output_path]
-        subprocess.run(cmd2, capture_output=True, text=True, timeout=300)
-        try:
-            os.remove(list_file)
-        except:
-            pass
+        print(f"   -> Pairwise merge error: {result.stderr[-300:]}")
+        # Last resort: just take first clip + audio
+        cmd = [FFMPEG, "-y", "-i", video_clips[0], "-i", audio_path,
+               "-c:v", "libx264", "-preset", "ultrafast",
+               "-c:a", "aac", "-b:a", "128k", "-pix_fmt", "yuv420p",
+               "-shortest", output_path]
+        subprocess.run(cmd, capture_output=True, text=True, timeout=180)
 
 
 def generate_video(topic, gemini_key, hf_token, voice="hi-IN-MadhurNeural"):
