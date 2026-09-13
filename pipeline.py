@@ -1,1 +1,427 @@
-IiIiCkNvcmUgVmlkZW8gUGlwZWxpbmUgLSBHaXRIdWIgQWN0aW9ucyBrZSBsaXllIChubyBHcmFkaW8sIG5vIHdlYiBVSSkKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KVG9waWMgc2UgdmlkZW8gYmFuYXRhIGhhaTogR2VtaW5pIC0+IEltYWdlcyAtPiBUVFMgLT4gRkZtcGVnIC0+IHZpZGVvLm1wNAoiIiIKCmltcG9ydCBvcwppbXBvcnQganNvbgppbXBvcnQgcmFuZG9tCmltcG9ydCBzdWJwcm9jZXNzCmltcG9ydCBhc3luY2lvCmltcG9ydCByZXF1ZXN0cwppbXBvcnQgZWRnZV90dHMKZnJvbSBtdXRhZ2VuLm1wMyBpbXBvcnQgTVAzCmZyb20gUElMIGltcG9ydCBJbWFnZQpmcm9tIGlvIGltcG9ydCBCeXRlc0lPCmltcG9ydCB0ZW1wZmlsZQppbXBvcnQgc2h1dGlsCgojIEZGbXBlZyBwYXRoCnRyeToKICAgIGltcG9ydCBpbWFnZWlvX2ZmbXBlZwogICAgRkZNUEVHID0gaW1hZ2Vpb19mZm1wZWcuZ2V0X2ZmbXBlZ19leGUoKQpleGNlcHQgRXhjZXB0aW9uOgogICAgRkZNUEVHID0gImZmbXBlZyIKClcsIEggPSAxMDgwLCAxOTIwICAjIDk6MTYgU2hvcnRzCkZQUyA9IDI1CkVGRkVDVFMgPSBbInpvb21faW4iLCAiem9vbV9vdXQiLCAicGFuX3JpZ2h0IiwgInBhbl9sZWZ0IiwgInBhbl91cCIsICJwYW5fZG93biJdCgoKZGVmIGdlbmVyYXRlX3NjZW5lcyh0b3BpYywgYXBpX2tleSwgbnVtX3NjZW5lcz02KToKICAgICIiIkdlbWluaSBBUEkgc2Ugc2NyaXB0IGxpa2h3YXRhIGhhaSAtIG11bHRpcGxlIG1vZGVscyB0cnkga2FydGEgaGFpIiIiCiAgICAKICAgIG1vZGVscyA9IFsKICAgICAgICAiZ2VtaW5pLTMuNi1mbGFzaCIsCiAgICAgICAgImdlbWluaS1mbGFzaC1sYXRlc3QiLAogICAgICAgICJnZW1pbmktMy41LWZsYXNoIiwKICAgICAgICAiZ2VtaW5pLTIuNS1mbGFzaCIsCiAgICBdCiAgICAKICAgIHByb21wdCA9IGYiIiJZb3UgYXJlIGEgcHJvZmVzc2lvbmFsIFlvdVR1YmUgU2hvcnRzIHNjcmlwdCB3cml0ZXIuCldyaXRlIGFuIGVuZ2FnaW5nIHNjcmlwdCBhYm91dDogInt0b3BpY30iCgpSdWxlczoKLSBUb3RhbCBkdXJhdGlvbiBzaG91bGQgYmUgMzAtNTAgc2Vjb25kcyB3aGVuIG5hcnJhdGVkCi0gQnJlYWsgaW50byBleGFjdGx5IHtudW1fc2NlbmVzfSBzaG9ydCBzY2VuZXMKLSBOYXJyYXRpb24gc2hvdWxkIGJlIGluIEhpbmdsaXNoIChIaW5kaSB3cml0dGVuIGluIEVuZ2xpc2ggbGV0dGVycykKLSBFYWNoIHNjZW5lIG5hcnJhdGlvbiBzaG91bGQgYmUgMS0yIHNlbnRlbmNlcyAoNS04IHNlY29uZHMgd2hlbiBzcG9rZW4pCi0gaW1hZ2VfcHJvbXB0IHNob3VsZCBiZSBpbiBFbmdsaXNoLCBkZXNjcmliaW5nIGEgdmlzdWFsIHRoYXQgbWF0Y2hlcyB0aGUgbmFycmF0aW9uCi0gTWFrZSBpdCBlbmdhZ2luZywgZmFzdC1wYWNlZCwgYW5kIGluZm9ybWF0aXZlCgpSRVRVUk4gT05MWSBhIHZhbGlkIEpTT04gYXJyYXksIG5vIG1hcmtkb3duOgpbCiAge3sibmFycmF0aW9uIjogIk5hbWFzdGUgZG9zdG8uLi4iLCAiaW1hZ2VfcHJvbXB0IjogIkluZGlhbiBwZXJzb24gd2F2aW5nLCBicmlnaHQgYmFja2dyb3VuZCJ9fSwKICAuLi4KXSIiIgoKICAgIGRhdGEgPSB7CiAgICAgICAgImNvbnRlbnRzIjogW3sicGFydHMiOiBbeyJ0ZXh0IjogcHJvbXB0fV19XSwKICAgICAgICAiZ2VuZXJhdGlvbkNvbmZpZyI6IHsKICAgICAgICAgICAgInJlc3BvbnNlTWltZVR5cGUiOiAiYXBwbGljYXRpb24vanNvbiIsCiAgICAgICAgICAgICJ0ZW1wZXJhdHVyZSI6IDAuOAogICAgICAgIH0KICAgIH0KCiAgICBsYXN0X2Vycm9yID0gIiIKICAgIGZvciBtb2RlbF9uYW1lIGluIG1vZGVsczoKICAgICAgICB1cmwgPSBmImh0dHBzOi8vZ2VuZXJhdGl2ZWxhbmd1YWdlLmdvb2dsZWFwaXMuY29tL3YxYmV0YS9tb2RlbHMve21vZGVsX25hbWV9OmdlbmVyYXRlQ29udGVudD9rZXk9e2FwaV9rZXl9IgogICAgICAgIHByaW50KGYiICAgVHJ5aW5nIG1vZGVsOiB7bW9kZWxfbmFtZX0uLi4iKQogICAgICAgIAogICAgICAgIHRyeToKICAgICAgICAgICAgcmVzcG9uc2UgPSByZXF1ZXN0cy5wb3N0KHVybCwganNvbj1kYXRhLCB0aW1lb3V0PTMwKQogICAgICAgICAgICByZXN1bHQgPSByZXNwb25zZS5qc29uKCkKICAgICAgICAgICAgCiAgICAgICAgICAgIGlmICJlcnJvciIgaW4gcmVzdWx0OgogICAgICAgICAgICAgICAgZXJyb3JfbXNnID0gcmVzdWx0WyJlcnJvciJdLmdldCgibWVzc2FnZSIsICJVbmtub3duIGVycm9yIikKICAgICAgICAgICAgICAgIGVycm9yX2NvZGUgPSByZXN1bHRbImVycm9yIl0uZ2V0KCJjb2RlIiwgIj8iKQogICAgICAgICAgICAgICAgcHJpbnQoZiIgICAtPiBFcnJvciB7ZXJyb3JfY29kZX06IHtlcnJvcl9tc2dbOjIwMF19IikKICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgaWYgZXJyb3JfY29kZSA9PSA1MDM6CiAgICAgICAgICAgICAgICAgICAgaW1wb3J0IHRpbWUKICAgICAgICAgICAgICAgICAgICBwcmludChmIiAgIC0+IFdhaXRpbmcgMTUgc2VjIGFuZCByZXRyeWluZy4uLiIpCiAgICAgICAgICAgICAgICAgICAgdGltZS5zbGVlcCgxNSkKICAgICAgICAgICAgICAgICAgICByZXNwb25zZSA9IHJlcXVlc3RzLnBvc3QodXJsLCBqc29uPWRhdGEsIHRpbWVvdXQ9MzApCiAgICAgICAgICAgICAgICAgICAgcmVzdWx0ID0gcmVzcG9uc2UuanNvbigpCiAgICAgICAgICAgICAgICAgICAgaWYgImNhbmRpZGF0ZXMiIGluIHJlc3VsdDoKICAgICAgICAgICAgICAgICAgICAgICAgdGV4dCA9IHJlc3VsdFsiY2FuZGlkYXRlcyJdWzBdWyJjb250ZW50Il1bInBhcnRzIl1bMF1bInRleHQiXQogICAgICAgICAgICAgICAgICAgICAgICBwcmludChmIiAgIC0+IFN1Y2Nlc3Mgd2l0aCB7bW9kZWxfbmFtZX0gKGFmdGVyIHJldHJ5KSEiKQogICAgICAgICAgICAgICAgICAgICAgICB0ZXh0ID0gdGV4dC5zdHJpcCgpCiAgICAgICAgICAgICAgICAgICAgICAgIGlmIHRleHQuc3RhcnRzd2l0aCgiYGBgIik6CiAgICAgICAgICAgICAgICAgICAgICAgICAgICB0ZXh0ID0gdGV4dC5zcGxpdCgiXG4iLCAxKVsxXS5yc3BsaXQoImBgYCIsIDEpWzBdLnN0cmlwKCkKICAgICAgICAgICAgICAgICAgICAgICAgc2NlbmVzID0ganNvbi5sb2Fkcyh0ZXh0KQogICAgICAgICAgICAgICAgICAgICAgICByZXR1cm4gc2NlbmVzCiAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgIGxhc3RfZXJyb3IgPSBmIk1vZGVsIHttb2RlbF9uYW1lfToge2Vycm9yX21zZ30iCiAgICAgICAgICAgICAgICBjb250aW51ZQogICAgICAgICAgICAKICAgICAgICAgICAgaWYgImNhbmRpZGF0ZXMiIG5vdCBpbiByZXN1bHQ6CiAgICAgICAgICAgICAgICBwcmludChmIiAgIC0+IE5vICdjYW5kaWRhdGVzJyBpbiByZXNwb25zZS4gRnVsbCByZXNwb25zZToge3N0cihyZXN1bHQpWzozMDBdfSIpCiAgICAgICAgICAgICAgICBsYXN0X2Vycm9yID0gZiJNb2RlbCB7bW9kZWxfbmFtZX06IE5vIGNhbmRpZGF0ZXMgaW4gcmVzcG9uc2UiCiAgICAgICAgICAgICAgICBjb250aW51ZQogICAgICAgICAgICAKICAgICAgICAgICAgdGV4dCA9IHJlc3VsdFsiY2FuZGlkYXRlcyJdWzBdWyJjb250ZW50Il1bInBhcnRzIl1bMF1bInRleHQiXQogICAgICAgICAgICBwcmludChmIiAgIC0+IFN1Y2Nlc3Mgd2l0aCB7bW9kZWxfbmFtZX0hIikKICAgICAgICAgICAgCiAgICAgICAgICAgIHRleHQgPSB0ZXh0LnN0cmlwKCkKICAgICAgICAgICAgaWYgdGV4dC5zdGFydHN3aXRoKCJgYGAiKToKICAgICAgICAgICAgICAgIHRleHQgPSB0ZXh0LnNwbGl0KCJcbiIsIDEpWzFdLnJzcGxpdCgiYGBgIiwgMSlbMF0uc3RyaXAoKQogICAgICAgICAgICAKICAgICAgICAgICAgc2NlbmVzID0ganNvbi5sb2Fkcyh0ZXh0KQogICAgICAgICAgICByZXR1cm4gc2NlbmVzCiAgICAgICAgICAgIAogICAgICAgIGV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgICAgICAgICAgcHJpbnQoZiIgICAtPiBFeGNlcHRpb246IHtlfSIpCiAgICAgICAgICAgIGxhc3RfZXJyb3IgPSBmIk1vZGVsIHttb2RlbF9uYW1lfToge3N0cihlKX0iCiAgICAgICAgICAgIGNvbnRpbnVlCiAgICAKICAgIHJhaXNlIEV4Y2VwdGlvbihmIkdlbWluaSBBUEkgc2Ugc2NyaXB0IG5haGkgYmFuIHBheWEuIExhc3QgZXJyb3I6IHtsYXN0X2Vycm9yfVxuIgogICAgICAgICAgICAgICAgICAgICBmIkNoZWNrIGthcm86IEFQSSBrZXkgc2FoaSBoYWkgeWEgbmFoaT8gYWlzdHVkaW8uZ29vZ2xlLmNvbS9hcGlrZXkiKQoKCmRlZiBnZW5lcmF0ZV9pbWFnZShwcm9tcHQsIGhmX3Rva2VuLCBpZHgsIG91dHB1dF9kaXIpOgogICAgIiIiUG9sbGluYXRpb25zLmFpIHNlIGltYWdlIGJhbmF0YSBoYWkgKGZyZWUsIG5vIEFQSSBrZXkgbmVlZGVkKSIiIgogICAgaW1wb3J0IHVybGxpYi5wYXJzZQogICAgCiAgICBlbmhhbmNlZF9wcm9tcHQgPSBwcm9tcHQgKyAiLCBoaWdoIHF1YWxpdHksIGNpbmVtYXRpYyBsaWdodGluZywgNGssIGRldGFpbGVkLCB2aWJyYW50IGNvbG9ycyIKICAgIGVuY29kZWRfcHJvbXB0ID0gdXJsbGliLnBhcnNlLnF1b3RlKGVuaGFuY2VkX3Byb21wdCkKICAgIHNlZWQgPSByYW5kb20ucmFuZGludCgxLCA5OTk5OTkpCiAgICAKICAgIHVybCA9IGYiaHR0cHM6Ly9pbWFnZS5wb2xsaW5hdGlvbnMuYWkvcHJvbXB0L3tlbmNvZGVkX3Byb21wdH0/d2lkdGg9NzY4JmhlaWdodD0xMzQ0Jm5vbG9nbz10cnVlJnNlZWQ9e3NlZWR9IgogICAgCiAgICBmb3IgYXR0ZW1wdCBpbiByYW5nZSgzKToKICAgICAgICB0cnk6CiAgICAgICAgICAgIHByaW50KGYiICAgICAgUG9sbGluYXRpb25zIGF0dGVtcHQge2F0dGVtcHQrMX0uLi4iKQogICAgICAgICAgICByZXNwb25zZSA9IHJlcXVlc3RzLmdldCh1cmwsIHRpbWVvdXQ9NjApCiAgICAgICAgICAgIGlmIHJlc3BvbnNlLnN0YXR1c19jb2RlID09IDIwMCBhbmQgJ2ltYWdlJyBpbiByZXNwb25zZS5oZWFkZXJzLmdldCgnQ29udGVudC1UeXBlJywgJycpOgogICAgICAgICAgICAgICAgaW1hZ2UgPSBJbWFnZS5vcGVuKEJ5dGVzSU8ocmVzcG9uc2UuY29udGVudCkpCiAgICAgICAgICAgICAgICBpbWFnZV9wYXRoID0gb3MucGF0aC5qb2luKG91dHB1dF9kaXIsIGYic2NlbmVfe2lkeH0ucG5nIikKICAgICAgICAgICAgICAgIGltYWdlLnNhdmUoaW1hZ2VfcGF0aCkKICAgICAgICAgICAgICAgIHJldHVybiBpbWFnZV9wYXRoCiAgICAgICAgICAgIGVsc2U6CiAgICAgICAgICAgICAgICBwcmludChmIiAgICAgIFN0YXR1czoge3Jlc3BvbnNlLnN0YXR1c19jb2RlfSIpCiAgICAgICAgICAgICAgICBpbXBvcnQgdGltZQogICAgICAgICAgICAgICAgdGltZS5zbGVlcCg1KQogICAgICAgIGV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgICAgICAgICAgcHJpbnQoZiIgICAgICBFcnJvcjoge2V9IikKICAgICAgICAgICAgaW1wb3J0IHRpbWUKICAgICAgICAgICAgdGltZS5zbGVlcCg1KQogICAgCiAgICBwcmludChmIiAgICAgIFVzaW5nIHBsYWNlaG9sZGVyIGltYWdlIikKICAgIGNvbG9ycyA9IFsoMzAsIDYwLCAxMjApLCAoMTIwLCAzMCwgNjApLCAoNjAsIDEyMCwgMzApLCAoMTIwLCA2MCwgMzApXQogICAgaW1nID0gSW1hZ2UubmV3KCJSR0IiLCAoNzY4LCAxMzQ0KSwgY29sb3I9Y29sb3JzW2lkeCAlIGxlbihjb2xvcnMpXSkKICAgIGltYWdlX3BhdGggPSBvcy5wYXRoLmpvaW4ob3V0cHV0X2RpciwgZiJzY2VuZV97aWR4fS5wbmciKQogICAgaW1nLnNhdmUoaW1hZ2VfcGF0aCkKICAgIHJldHVybiBpbWFnZV9wYXRoCgoKZGVmIGdlbmVyYXRlX3ZvaWNlKHRleHQsIG91dHB1dF9wYXRoLCB2b2ljZT0iaGktSU4tTWFkaHVyTmV1cmFsIik6CiAgICAiIiJFZGdlIFRUUyBzZSB2b2ljZW92ZXIiIiIKICAgIGFzeW5jIGRlZiBfZ2VuKCk6CiAgICAgICAgY29tbXVuaWNhdGUgPSBlZGdlX3R0cy5Db21tdW5pY2F0ZSh0ZXh0LCB2b2ljZSkKICAgICAgICBhd2FpdCBjb21tdW5pY2F0ZS5zYXZlKG91dHB1dF9wYXRoKQogICAgYXN5bmNpby5ydW4oX2dlbigpKQogICAgcmV0dXJuIG91dHB1dF9wYXRoCgoKZGVmIGdldF9hdWRpb19kdXJhdGlvbihhdWRpb19wYXRoKToKICAgIGF1ZGlvID0gTVAzKGF1ZGlvX3BhdGgpCiAgICByZXR1cm4gYXVkaW8uaW5mby5sZW5ndGgKCgpkZWYgX2dldF9maWx0ZXIoZWZmZWN0LCBkdXJhdGlvbl9zZWMpOgogICAgdG90YWxfZnJhbWVzID0gaW50KGR1cmF0aW9uX3NlYyAqIEZQUykKICAgIHpfc3BlZWQgPSAwLjAwMTUKICAgIAogICAgaWYgZWZmZWN0ID09ICJ6b29tX2luIjoKICAgICAgICB2ZiA9IGYiem9vbXBhbj16PSdtaW4oem9vbSt7el9zcGVlZH0sMS41KSc6ZD17dG90YWxfZnJhbWVzfTpzPXtXfXh7SH06ZnBzPXtGUFN9IgogICAgZWxpZiBlZmZlY3QgPT0gInpvb21fb3V0IjoKICAgICAgICB2ZiA9IGYiem9vbXBhbj16PSdpZihlcShvbiwwKSwxLjUsbWF4KHpvb20te3pfc3BlZWR9LDEuMCkpJzpkPXt0b3RhbF9mcmFtZXN9OnM9e1d9eHtIfTpmcHM9e0ZQU30iCiAgICBlbGlmIGVmZmVjdCA9PSAicGFuX3JpZ2h0IjoKICAgICAgICB2ZiA9IGYiem9vbXBhbj16PTEuMzp4PScoaXctaXcvem9vbSkqb24ve3RvdGFsX2ZyYW1lc30nOnk9J2loLzItKGloL3pvb20vMiknOmQ9e3RvdGFsX2ZyYW1lc306cz17V314e0h9OmZwcz17RlBTfSIKICAgIGVsaWYgZWZmZWN0ID09ICJwYW5fbGVmdCI6CiAgICAgICAgdmYgPSBmInpvb21wYW49ej0xLjM6eD0nKGl3LWl3L3pvb20pKigxLW9uL3t0b3RhbF9mcmFtZXN9KSc6eT0naWgvMi0oaWgvem9vbS8yKSc6ZD17dG90YWxfZnJhbWVzfTpzPXtXfXh7SH06ZnBzPXtGUFN9IgogICAgZWxpZiBlZmZlY3QgPT0gInBhbl91cCI6CiAgICAgICAgdmYgPSBmInpvb21wYW49ej0xLjM6eD0naXcvMi0oaXcvem9vbS8yKSc6eT0nKGloLWloL3pvb20pKigxLW9uL3t0b3RhbF9mcmFtZXN9KSc6ZD17dG90YWxfZnJhbWVzfTpzPXtXfXh7SH06ZnBzPXtGUFN9IgogICAgZWxpZiBlZmZlY3QgPT0gInBhbl9kb3duIjoKICAgICAgICB2ZiA9IGYiem9vbXBhbj16PTEuMzp4PSdpdy8yLShpdy96b29tLzIpJzp5PScoaWgtaWgvem9vbSkqb24ve3RvdGFsX2ZyYW1lc30nOmQ9e3RvdGFsX2ZyYW1lc306cz17V314e0h9OmZwcz17RlBTfSIKICAgIGVsc2U6CiAgICAgICAgdmYgPSBmInpvb21wYW49ej0nbWluKHpvb20re3pfc3BlZWR9LDEuMyknOmQ9e3RvdGFsX2ZyYW1lc306cz17V314e0h9OmZwcz17RlBTfSIKICAgIHJldHVybiB2ZgoKCmRlZiBjcmVhdGVfdmlkZW9fY2xpcChpbWFnZV9wYXRoLCBkdXJhdGlvbiwgb3V0cHV0X3BhdGgsIGVmZmVjdD1Ob25lKToKICAgICIiIkltYWdlIHNlIHZpZGVvIGNsaXAgKG5vIGF1ZGlvKSB3aXRoIEtlbiBCdXJucyBlZmZlY3QiIiIKICAgIGlmIGVmZmVjdCBpcyBOb25lOgogICAgICAgIGVmZmVjdCA9IHJhbmRvbS5jaG9pY2UoRUZGRUNUUykKICAgIAogICAgdmYgPSBfZ2V0X2ZpbHRlcihlZmZlY3QsIGR1cmF0aW9uKQogICAgc2NhbGVfY3JvcCA9IGYic2NhbGU9e1d9OntIfTpmb3JjZV9vcmlnaW5hbF9hc3BlY3RfcmF0aW89aW5jcmVhc2UsY3JvcD17V306e0h9IgogICAgZnVsbF9maWx0ZXIgPSBmIntzY2FsZV9jcm9wfSx7dmZ9IgogICAgCiAgICBjbWQgPSBbRkZNUEVHLCAiLXkiLCAiLWxvb3AiLCAiMSIsICItaSIsIGltYWdlX3BhdGgsCiAgICAgICAgICAgIi12ZiIsIGZ1bGxfZmlsdGVyLCAiLWM6diIsICJsaWJ4MjY0IiwgIi1wcmVzZXQiLCAidWx0cmFmYXN0IiwKICAgICAgICAgICAiLXQiLCBzdHIoZHVyYXRpb24pLCAiLXBpeF9mbXQiLCAieXV2NDIwcCIsICItYW4iLCBvdXRwdXRfcGF0aF0KICAgIAogICAgcmVzdWx0ID0gc3VicHJvY2Vzcy5ydW4oY21kLCBjYXB0dXJlX291dHB1dD1UcnVlLCB0ZXh0PVRydWUsIHRpbWVvdXQ9MTIwKQogICAgaWYgcmVzdWx0LnJldHVybmNvZGUgIT0gMDoKICAgICAgICBjbWRfZmIgPSBbRkZNUEVHLCAiLXkiLCAiLWxvb3AiLCAiMSIsICItaSIsIGltYWdlX3BhdGgsCiAgICAgICAgICAgICAgICAgICItdmYiLCBzY2FsZV9jcm9wLCAiLWM6diIsICJsaWJ4MjY0IiwgIi1wcmVzZXQiLCAidWx0cmFmYXN0IiwKICAgICAgICAgICAgICAgICAgIi10Iiwgc3RyKGR1cmF0aW9uKSwgIi1waXhfZm10IiwgInl1djQyMHAiLCAiLWFuIiwgb3V0cHV0X3BhdGhdCiAgICAgICAgc3VicHJvY2Vzcy5ydW4oY21kX2ZiLCBjYXB0dXJlX291dHB1dD1UcnVlLCB0ZXh0PVRydWUsIHRpbWVvdXQ9MTIwKQogICAgcmV0dXJuIGVmZmVjdAoKCmRlZiBjcmVhdGVfY29tcGxldGVfY2xpcCh2aWRlb19jbGlwX3BhdGgsIGF1ZGlvX3BhdGgsIG91dHB1dF9wYXRoKToKICAgICIiIgogICAgVmlkZW8gY2xpcCArIGF1ZGlvIGtvIGpvZGtlIGVrIGNvbXBsZXRlIGNsaXAgYmFuYXRhIGhhaS4KICAgIFllIHNhc3NlIHJlbGlhYmxlIGFwcHJvYWNoIGhhaS4KICAgICIiIgogICAgY21kID0gW0ZGTVBFRywgIi15IiwgIi1pIiwgdmlkZW9fY2xpcF9wYXRoLCAiLWkiLCBhdWRpb19wYXRoLAogICAgICAgICAgICktYzp2IiwgImxpYngyNjQiLCAiLXByZXNldCIsICJ1bHRyYWZhc3QiLAogICAgICAgICAgICItYzphIiwgImFhYyIsICItYjphIiwgIjEyOGsiLAogICAgICAgICAgICAtcGl4X2ZtdCIsICJ5dXY0MjBwIiwKICAgICAgICAgICAiLXNob3J0ZXN0Iiwgb3V0cHV0X3BhdGhdCiAgICByZXN1bHQgPSBzdWJwcm9jZXNzLnJ1bihjbWQsIGNhcHR1cmVfb3V0cHV0PVRydWUsIHRleHQ9VHJ1ZSwgdGltZW91dD0xMjApCiAgICByZXR1cm4gcmVzdWx0LnJldHVybmNvZGUgPT0gMCBhbmQgb3MucGF0aC5leGlzdHMob3V0cHV0X3BhdGgpCgoKZGVmIGNvbmNhdF9jbGlwcyhjbGlwX3BhdGhzLCBvdXRwdXRfcGF0aCk6CiAgICAiIiIKICAgIFNhYXJlIGNvbXBsZXRlIGNsaXBzIGtvIGVrIG1lIGpvZHRhIGhhaSAoY29uY2F0IGRlbXV4ZXIpLgogICAgRWFjaCBjbGlwIGFscmVhZHkgaGFzIHZpZGVvK2F1ZGlvLgogICAgIiIiCiAgICBsaXN0X2ZpbGUgPSBvdXRwdXRfcGF0aCArICJfY29uY2F0LnR4dCIKICAgIHdpdGggb3BlbihsaXN0X2ZpbGUsICJ3IikgYXMgZjoKICAgICAgICBmb3IgY3AgaW4gY2xpcF9wYXRoczoKICAgICAgICAgICAgZi53cml0ZShmImZpbGUgJ3tjcH0nXG4iKQogICAgCiAgICBjbWQgPSBbRkZNUEVHLCAiLXkiLCAiLWYiLCAiY29uY2F0IiwgIi1zYWZlIiwgIjAiLCAiLWkiLCBsaXN0X2ZpbGUsCiAgICAgICAgICAgIi1jOnYiLCAibGlieDI2NCIsICItcHJlc2V0IiwgInVsdHJhZmFzdCIsCiAgICAgICAgICAgIi1jOmEiLCAiYWFjIiwgIi1iOmEiLCAiMTI4ayIsCiAgICAgICAgICAgICItcGl4X2ZtdCIsICJ5dXY0MjBwIiwKICAgICAgICAgICAgb3V0cHV0X3BhdGhdCiAgICByZXN1bHQgPSBzdWJwcm9jZXNzLnJ1bihjbWQsIGNhcHR1cmVfb3V0cHV0PVRydWUsIHRleHQ9VHJ1ZSwgdGltZW91dD0zMDApCiAgICAKICAgIHRyeToKICAgICAgICBvcy5yZW1vdmUobGlzdF9maWxlKQogICAgZXhjZXB0OgogICAgICAgIHBhc3MKICAgIAogICAgcmV0dXJuIHJlc3VsdC5yZXR1cm5jb2RlID09IDAgYW5kIG9zLnBhdGguZXhpc3RzKG91dHB1dF9wYXRoKQoKCmRlZiBtZXJnZV9hbGxfY2xpcHModmlkZW9fY2xpcHMsIGF1ZGlvX3BhdGhzLCBvdXRwdXRfcGF0aCk6CiAgICAiIiIKICAgIFNJTVBMRVNUIEFQUFJPQUNIOgogICAgMS4gSGFyIGNsaXAgbWUgdXNrYSBhdWRpbyBkYWFsbyAoY29tcGxldGUgY2xpcCBiYW5hbykKICAgIDIuIFNhYXJlIGNvbXBsZXRlIGNsaXBzIGtvIGNvbmNhdCBrYXJvCiAgICAiIiIKICAgIHByaW50KCIgICAtPiBTdGVwIDE6IEhhciBjbGlwIG1lIGF1ZGlvIGRhYWwgcmFoYSBoYWkuLi4iKQogICAgY29tcGxldGVfY2xpcHMgPSBbXQogICAgCiAgICBmb3IgaSBpbiByYW5nZShsZW4odmlkZW9fY2xpcHMpKToKICAgICAgICBjb21wbGV0ZV9jbGlwX3BhdGggPSBvdXRwdXRfcGF0aCArIGYiX2NvbXBsZXRlX3tpfS5tcDQiCiAgICAgICAgcHJpbnQoZiIgICAgICBDbGlwIHtpKzF9L3tsZW4odmlkZW9fY2xpcHMpfTogdmlkZW8gKyBhdWRpbyBtZXJnZS4uLiIpCiAgICAgICAgCiAgICAgICAgc3VjY2VzcyA9IGNyZWF0ZV9jb21wbGV0ZV9jbGlwKAogICAgICAgICAgICB2aWRlb19jbGlwc1tpXSwgYXVkaW9fcGF0aHNbaV0sIGNvbXBsZXRlX2NsaXBfcGF0aAogICAgICAgICkKICAgICAgICAKICAgICAgICBpZiBzdWNjZXNzIGFuZCBvcy5wYXRoLmV4aXN0cyhjb21wbGV0ZV9jbGlwX3BhdGgpOgogICAgICAgICAgICBjb21wbGV0ZV9jbGlwcy5hcHBlbmQoY29tcGxldGVfY2xpcF9wYXRoKQogICAgICAgICAgICBwcmludChmIiAgICAgIC0+IFN1Y2Nlc3MhICh7b3Mu cGF0aC5nZXRzaXplKGNvbXBsZXRlX2NsaXBfcGF0aCl9IGJ5dGVzKSIpCiAgICAgICAgZWxzZToKICAgICAgICAgICAgcHJpbnQoZiIgICAgIC0+IEZBSUxFRCAhIFNraXBwaW5nIHRoaXMgY2xpcCIpCiAgICAKICAgIGlmIG5vdCBjb21wbGV0ZV9jbGlwczoKICAgICAgICBwcmludCgiICAgLT4gRVJST1I6IEtvaSBiYWhpIGNvbXBsZXRlIGNsaXAgbmFoaWkgYmFuYSEiKQogICAgICAgIHJldHVybiBGYWxzZQogICAgCiAgICBwcmludChmIiAgIC0+IFN0ZXAgMjoge2xlbihjb21wbGV0ZV9jbGlwcyl9IGNsaXBzIGNvbmNhdCBobyByYWhlIGhhaW4uLi4iKQogICAgc3VjY2VzcyA9IGNvbmNhdF9jbGlwcyhjb21wbGV0ZV9jbGlwcywgb3V0cHV0X3BhdGgpCiAgICAKICAgICMgQ2xlYW51cAogICAgZm9yIGNwIGluIGNvbXBsZXRlX2NsaXBzOgogICAgICAgIHRyeToKICAgICAgICAgICAgb3MucmVtb3ZlKGNwKQogICAgICAgIGV4Y2VwdDoKICAgICAgICAgICAgcGFzcwogICAgCiAgICBpZiBzdWNjZXNzOgogICAgICAgIHByaW50KGYiICAgLT4gRmluYWwgdmlkZW8gcmVhZHkhICh7b3Mu cGF0aC5nZXRzaXplKG91dHB1dF9wYXRoKX0gYnl0ZXMpIikKICAgIGVsc2U6CiAgICAgICAgcHJpbnQoIiAgIC0+IENvbmNhdCBmYWlsZWQhIFRyeWluZyBmaWx0ZXItYmFzZWQgY29uY2F0Li4uIikKICAgICAgICAjIEZhbGxiYWNrOiBmaWx0ZXItYmFzZWQgY29uY2F0CiAgICAgICAgX2ZpbHRlcl9jb25jYXQoY29tcGxldGVfY2xpcHMsIG91dHB1dF9wYXRoKQogICAgCiAgICByZXR1cm4gb3MucGF0aC5leGlzdHMob3V0cHV0X3BhdGgpCgoKZGVmIF9maWx0ZXJfY29uY2F0KGNsaXBfcGF0aHMsIG91dHB1dF9wYXRoKToKICAgICIiIkZhbGxiYWNrOiBmaWx0ZXJfY29tcGxleCBjb25jYXQiIiIKICAgIG4gPSBsZW4oY2xpcF9wYXRocykKICAgIGlmIG4gPT0gMDoKICAgICAgICByZXR1cm4KICAgIAogICAgaW5wdXRzID0gW10KICAgIGZvciBjcCBpbiBjbGlwX3BhdGhzOgogICAgICAgIGlucHV0cy5leHRlbmQoWyItaSIsIGNwXSkKICAgIAogICAgdmlkZW9fbGFiZWxzID0gIiIuam9pbihbZiJbe2l9OnZdIiBmb3IgaSBpbiByYW5nZShuKV0pCiAgICBhdWRpb19sYWJlbHMgPSAiIi5qb2luKFtmIlt7aX06YV0iIGZvciBpIGluIHJhbmdlKG4pXSkKICAgIGZpbHRlcl9jb21wbGV4ID0gKAogICAgICAgIGZbe3ZpZGVvX2xhYmVsc319Y29uY2F0PW49e259OnY9MTphPTBbdm91dF07IgogICAgICAgIGZ7YXVkaW9fbGFiZWxzXX1jb25jYXQ9bj17bn06dj0wOmE9MVthb3V0XSIKICAgICkKICAgIAogICAgY21kID0gW0ZGTVBFRywgIi15IiwgKmlucHV0cywgIi1maWx0ZXJfY29tcGxleCIsIGZpbHRlcl9jb21wbGV4LAogICAgICAgICAgIC1tYXAiLCAiW3ZvdXRdIiwgIi1tYXAiLCAiW2FvdXRdIiwKICAgICAgICAgICAiLWM6diIsICJsaWJ4MjY0IiwgIi1wcmVzZXQiLCAidWx0cmFmYXN0IiwKICAgICAgICAgICAiLWM6YSIsICJhYWMiLCAiLWI6YSIsICIxMjhrIiwgIi1waXhfZm10IiwgInl1djQyMHAiLAogICAgICAgICAgIG91dHB1dF9wYXRoXQogICAgcmVzdWx0ID0gc3VicHJvY2Vzcy5ydW4oY21kLCBjYXB0dXJlX291dHB1dD1UcnVlLCB0ZXh0PVRydWUsIHRpbWVvdXQ9MzAwKQogICAgaWYgcmVzdWx0LnJldHVybmNvZGUgIT0gMDoKICAgICAgICBwcmludChmIiAgIC0+IEZpbHRlciBjb25jYXQgYWxzbyBmYWlsZWQ6IHtyZXN1bHQuc3RkZXJyWy0zMDA6XX0iKQogICAgICAgICMgTGFzdCByZXNvcnQ6IGp1c3QgdXNlIGZpcnN0IGNsaXAKICAgICAgICBpZiBjbGlwX3BhdGhzOgogICAgICAgICAgICBzaHV0aWwuY29weShjbGlwX3BhdGhzWzBdLCBvdXRwdXRfcGF0aCkKICAgICAgICAgICAgcHJpbnQoIiAgIC0+IFVzZWQgZmlyc3QgY2xpcCBhcyBmYWxsYmFjayIpCgoKZGVmIGdlbmVyYXRlX3ZpZGVvKHRvcGljLCBnZW1pbmlfa2V5LCBoZl90b2tlbiwgdm9pY2U9ImhpLUlOLU1hZGh1ck5ldXJhbCIpOgogICAgIiIiUHVyYSBwaXBlbGluZTogdG9waWMgLT4gZmluYWwgdmlkZW8gZmlsZS4gUmV0dXJucyAodmlkZW9fcGF0aCwgaW5mb19kaWN0KSIiIgogICAgd29ya19kaXIgPSB0ZW1wZmlsZS5ta2R0ZW1wKHByZWZpeD0idmlkZW9fcGlwZWxpbmVfIikKICAgIGltYWdlc19kaXIgPSBvcy5wYXRoLmpvaW4od29ya19kaXIsICJpbWFnZXMiKQogICAgYXVkaW9fZGlyID0gb3MucGF0aC5qb2luKHdvcmtfZGlyLCAiYXVkaW8iKQogICAgY2xpcHNfZGlyID0gb3MucGF0aC5qb2luKHdvcmtfZGlyLCAiY2xpcHMiKQogICAgZm9yIGQgaW4gW2ltYWdlc19kaXIsIGF1ZGlvX2RpciwgY2xpcHNfZGlyXToKICAgICAgICBvcy5tYWtlZGlycyhkLCBleGlzdF9vaz1UcnVlKQoKICAgIHRyeToKICAgICAgICBwcmludChmIlsxLzVdIFNjcmlwdCBsaWtoYSBqYSByYWhhIGhhaSAoR2VtaW5pIEFQSSkuLi4iKQogICAgICAgIHNjZW5lcyA9IGdlbmVyYXRlX3NjZW5lcyh0b3BpYywgZ2VtaW5pX2tleSwgbnVtX3NjZW5lcz02KQogICAgICAgIHRvdGFsX3NjZW5lcyA9IGxlbihzY2VuZXMpCiAgICAgICAgcHJpbnQoZiIgICAtPiB7dG90YWxfc2NlbmVzfSBzY2VuZXMgYmFuIGdheWUiKQoKICAgICAgICBwcmludChmIlsyLzVdIEltYWdlcyBiYW4gcmFoZSBoYWluIChQb2xsaW5hdGlvbnMpLi4uIikKICAgICAgICBpbWFnZV9wYXRocyA9IFtdCiAgICAgICAgZm9yIGksIHMgaW4gZW51bWVyYXRlKHNjZW5lcyk6CiAgICAgICAgICAgIGltYWdlX3Byb21wdCA9IHMuZ2V0KCJpbWFnZV9wcm9tcHQiLCBzLmdldCgiaW1hZ2UiLCAiYWJzdHJhY3QgYXJ0IikpCiAgICAgICAgICAgIHByaW50KGYiICAgLT4gSW1hZ2Uge2krMX0ve3RvdGFsX3NjZW5lc30uLi4iKQogICAgICAgICAgICBpbWdfcGF0aCA9IGdlbmVyYXRlX2ltYWdlKGltYWdlX3Byb21wdCwgaGZfdG9rZW4sIGksIGltYWdlc19kaXIpCiAgICAgICAgICAgIGltYWdlX3BhdGhzLmFwcGVuZChpbWdfcGF0aCkKICAgICAgICBwcmludChmIiAgIC0+IFNhYXJpIGltYWdlcyByZWFkeSEiKQoKICAgICAgICBwcmludChmIlszLzVdIFZvaWNlb3ZlciBiYW4gcmFoYSBoYWkgKEVkZ2UgVFRTKS4uLiIpCiAgICAgICAgYXVkaW9fcGF0aHMgPSBbXQogICAgICAgIGR1cmF0aW9ucyA9IFtdCiAgICAgICAgZm9yIGksIHMgaW4gZW51bWVyYXRlKHNjZW5lcyk6CiAgICAgICAgICAgIG5hcnJhdGlvbiA9IHMuZ2V0KCJuYXJyYXRpb24iLCBzLmdldCgidGV4dCIsICIiKSkKICAgICAgICAgICAgYXVkaW9fcGF0aCA9IG9zLnBhdGguam9pbihhdWRpb19kaXIsIGYic2NlbmVfe2l9Lm1wMyIpCiAgICAgICAgICAgIGdlbmVyYXRlX3ZvaWNlKG5hcnJhdGlvbiwgYXVkaW9fcGF0aCwgdm9pY2UpCiAgICAgICAgICAgIGR1ciA9IGdldF9hdWRpb19kdXJhdGlvbihhdWRpb19wYXRoKQogICAgICAgICAgICBhdWRpb19wYXRocy5hcHBlbmQoYXVkaW9fcGF0aCkKICAgICAgICAgICAgZHVyYXRpb25zLmFwcGVuZChkdXIpCiAgICAgICAgdG90YWxfZHVyYXRpb24gPSBzdW0oZHVyYXRpb25zKQogICAgICAgIHByaW50KGYiICAgLT4gVG90YWwgYXVkaW86IHt0b3RhbF9kdXJhdGlvbjouMWZ9IHNlYyIpCgogICAgICAgIHByaW50KGYiWzQvNV0gVmlkZW8gY2xpcHMgYmFuIHJhaGUgaGFpbiAoRkZtcGVnIGVmZmVjdHMpLi4uIikKICAgICAgICBjbGlwX3BhdGhzID0gW10KICAgICAgICB1c2VkX2VmZmVjdHMgPSBbXQogICAgICAgIGZvciBpIGluIHJhbmdlKHRvdGFsX3NjZW5lcyk6CiAgICAgICAgICAgIGNsaXBfcGF0aCA9IG9zLnBhdGguam9pbihjbGlwc19kaXIsIGYiY2xpcF97aX0ubXA0IikKICAgICAgICAgICAgZWZmZWN0ID0gY3JlYXRlX3ZpZGVvX2NsaXAoaW1hZ2VfcGF0aHNbaV0sIGR1cmF0aW9uc1tpXSwgY2xpcF9wYXRoKQogICAgICAgICAgICB1c2VkX2VmZmVjdHMuYXBwZW5kKGVmZmVjdCkKICAgICAgICAgICAgcHJpbnQoZiIgICAtPiBDbGlwIHtpKzF9L3t0b3RhbF9zY2VuZXN9OiB7ZWZmZWN0fSIpCiAgICAgICAgCiAgICAgICAgcHJpbnQoZiJbNS81XSBGaW5hbCB2aWRlbyBhc3NlbWJsZSBobyByYWhpIGhhaS4uLiIpCiAgICAgICAgZmluYWxfcGF0aCA9IG9zLnBhdGguam9pbih3b3JrX2RpciwgImZpbmFsX3ZpZGVvLm1wNCIpCiAgICAgICAgc3VjY2VzcyA9IG1lcmdlX2FsbF9jbGlwcyhjbGlwX3BhdGhzLCBhdWRpb19wYXRocywgZmluYWxfcGF0aCkKCiAgICAgICAgaWYgbm90IHN1Y2Nlc3Mgb3Igbm90IG9zLnBhdGguZXhpc3RzKGZpbmFsX3BhdGgpOgogICAgICAgICAgICByYWlzZSBFeGNlcHRpb24oIkZpbmFsIHZpZGVvIGJhbiBuYWhpIHBheWkhIikKICAgICAgICAKICAgICAgICAjIENvcHkgdG8gc3RhYmxlIHBhdGgKICAgICAgICBvdXRwdXRfcGF0aCA9IG9zLnBhdGguam9pbihvcy5nZXRjd2QoKSwgImZpbmFsX3ZpZGVvLm1wNCIpCiAgICAgICAgc2h1dGlsLmNvcHkoZmluYWxfcGF0aCwgb3V0cHV0X3BhdGgpCgogICAgICAgICMgQnVpbGQgaW5mbwogICAgICAgIG5hcnJhdGlvbnMgPSBbcy5nZXQoIm5hcnJhdGlvbiIsIHMuZ2V0KCJ0ZXh0IiwgIiIpKSBmb3IgcyBpbiBzY2VuZXNdCiAgICAgICAgdGl0bGUgPSB0b3BpY1s6NjBdICsgIi4uLiIgaWYgbGVuKHRvcGljKSA+IDYwIGVsc2UgdG9waWMKICAgICAgICBjYXRjaHlfdGl0bGUgPSBuYXJyYXRpb25zWzBdWzo1MF0gKyAiLi4uIiBpZiBsZW4obmFycmF0aW9uc1swXSkgPiA1MCBlbHNlIG5hcnJhdGlvbnNbMF0KICAgICAgICAKICAgICAgICBkZXNjcmlwdGlvbiA9IGYiIiJ7dG9waWN9CgpTY2VuZSBicmVha2Rvd246CiIiIiArICJcbiIuam9pbihbZiJ7aSsxfS4ge25hcnJhdGlvbnNbaV19IiBmb3IgaSBpbiByYW5nZSh0b3RhbF9zY2VuZXMpXSkKCiAgICAgICAgdGFncyA9IHRvcGljLnNwbGl0KClbOjEwXQogICAgICAgIAogICAgICAgIGluZm8gPSB7CiAgICAgICAgICAgICJ2aWRlb19wYXRoIjogb3V0cHV0X3BhdGgsCiAgICAgICAgICAgICJ0aXRsZSI6IGNhdGNoeV90aXRsZSwKICAgICAgICAgICAgImRlc2NyaXB0aW9uIjogZGVzY3JpcHRpb24sCiAgICAgICAgICAgICJ0YWdzIjogdGFncywKICAgICAgICAgICAgImR1cmF0aW9uIjogdG90YWxfZHVyYXRpb24sCiAgICAgICAgICAgICJzY2VuZXMiOiBuYXJyYXRpb25zLAogICAgICAgICAgICAiZWZmZWN0cyI6IHVzZWRfZWZmZWN0cywKICAgICAgICB9CiAgICAgICAgCiAgICAgICAgcHJpbnQoZiJcbuKchSBWaWRlbyByZWFkeSEgRHVyYXRpb246IHt0b3RhbF9kdXJhdGlvbjouMWZ9cyIpCiAgICAgICAgcHJpbnQoZiIgICBQYXRoOiB7b3V0cHV0X3BhdGh9IikKICAgICAgICBwcmludChmIiAgIFRpdGxlOiB7Y2F0Y2h5X3RpdGxlfSIpCiAgICAgICAgCiAgICAgICAgcmV0dXJuIG91dHB1dF9wYXRoLCBpbmZvCgogICAgZXhjZXB0IEV4Y2VwdGlvbiBhcyBlOgogICAgICAgIGltcG9ydCB0cmFjZWJhY2sKICAgICAgICBwcmludChmIuKdjCBFcnJvcjoge2V9IikKICAgICAgICBwcmludCh0cmFjZWJhY2suZm9ybWF0X2V4YygpWy01MDA6XSkKICAgICAgICByZXR1cm4gTm9uZSwgTm9uZQogICAgZmluYWxseToKICAgICAgICB0cnk6CiAgICAgICAgICAgIHNodXRpbC5ybXRyZWUod29ya19kaXIpCiAgICAgICAgZXhjZXB0OgogICAgICAgICAgICBwYXNzCg==
+"""
+Core Video Pipeline - GitHub Actions ke liye (no Gradio, no web UI)
+====================================================================
+Topic se video banata hai: Gemini -> Images -> TTS -> FFmpeg -> video.mp4
+"""
+
+import os
+import json
+import random
+import subprocess
+import asyncio
+import requests
+import edge_tts
+from mutagen.mp3 import MP3
+from PIL import Image
+from io import BytesIO
+import tempfile
+import shutil
+
+# FFmpeg path
+try:
+    import imageio_ffmpeg
+    FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
+except Exception:
+    FFMPEG = "ffmpeg"
+
+W, H = 1080, 1920  # 9:16 Shorts
+FPS = 25
+EFFECTS = ["zoom_in", "zoom_out", "pan_right", "pan_left", "pan_up", "pan_down"]
+
+
+def generate_scenes(topic, api_key, num_scenes=6):
+    """Gemini API se script likhwata hai - multiple models try karta hai"""
+    
+    models = [
+        "gemini-3.6-flash",
+        "gemini-flash-latest",
+        "gemini-3.5-flash",
+        "gemini-2.5-flash",
+    ]
+    
+    prompt = f"""You are a professional YouTube Shorts script writer.
+Write an engaging script about: "{topic}"
+
+Rules:
+- Total duration should be 30-50 seconds when narrated
+- Break into exactly {num_scenes} short scenes
+- Narration should be in Hinglish (Hindi written in English letters)
+- Each scene narration should be 1-2 sentences (5-8 seconds when spoken)
+- image_prompt should be in English, describing a visual that matches the narration
+- Make it engaging, fast-paced, and informative
+
+RETURN ONLY a valid JSON array, no markdown:
+[
+  {{"narration": "Namaste dosto...", "image_prompt": "Indian person waving, bright background"}},
+  ...
+]"""
+
+    data = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "responseMimeType": "application/json",
+            "temperature": 0.8
+        }
+    }
+
+    last_error = ""
+    for model_name in models:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+        print(f"   Trying model: {model_name}...")
+        
+        try:
+            response = requests.post(url, json=data, timeout=30)
+            result = response.json()
+            
+            if "error" in result:
+                error_msg = result["error"].get("message", "Unknown error")
+                error_code = result["error"].get("code", "?")
+                print(f"   -> Error {error_code}: {error_msg[:200]}")
+                
+                if error_code == 503:
+                    import time
+                    print(f"   -> Waiting 15 sec and retrying...")
+                    time.sleep(15)
+                    response = requests.post(url, json=data, timeout=30)
+                    result = response.json()
+                    if "candidates" in result:
+                        text = result["candidates"][0]["content"]["parts"][0]["text"]
+                        print(f"   -> Success with {model_name} (after retry)!")
+                        text = text.strip()
+                        if text.startswith("```"):
+                            text = text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                        scenes = json.loads(text)
+                        return scenes
+                
+                last_error = f"Model {model_name}: {error_msg}"
+                continue
+            
+            if "candidates" not in result:
+                print(f"   -> No 'candidates' in response. Full response: {str(result)[:300]}")
+                last_error = f"Model {model_name}: No candidates in response"
+                continue
+            
+            text = result["candidates"][0]["content"]["parts"][0]["text"]
+            print(f"   -> Success with {model_name}!")
+            
+            text = text.strip()
+            if text.startswith("```"):
+                text = text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+            
+            scenes = json.loads(text)
+            return scenes
+            
+        except Exception as e:
+            print(f"   -> Exception: {e}")
+            last_error = f"Model {model_name}: {str(e)}"
+            continue
+    
+    raise Exception(f"Gemini API se script nahi ban paya. Last error: {last_error}\n"
+                     f"Check karo: API key sahi hai ya nahi? aistudio.google.com/apikey")
+
+
+def generate_image(prompt, hf_token, idx, output_dir):
+    """Pollinations.ai se image banata hai (free, no API key needed)"""
+    import urllib.parse
+    
+    enhanced_prompt = prompt + ", high quality, cinematic lighting, 4k, detailed, vibrant colors"
+    encoded_prompt = urllib.parse.quote(enhanced_prompt)
+    seed = random.randint(1, 999999)
+    
+    url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=768&height=1344&nologo=true&seed={seed}"
+    
+    for attempt in range(3):
+        try:
+            print(f"      Pollinations attempt {attempt+1}...")
+            response = requests.get(url, timeout=60)
+            if response.status_code == 200 and 'image' in response.headers.get('Content-Type', ''):
+                image = Image.open(BytesIO(response.content))
+                image_path = os.path.join(output_dir, f"scene_{idx}.png")
+                image.save(image_path)
+                return image_path
+            else:
+                print(f"      Status: {response.status_code}")
+                import time
+                time.sleep(5)
+        except Exception as e:
+            print(f"      Error: {e}")
+            import time
+            time.sleep(5)
+    
+    print(f"      Using placeholder image")
+    colors = [(30, 60, 120), (120, 30, 60), (60, 120, 30), (120, 60, 30)]
+    img = Image.new("RGB", (768, 1344), color=colors[idx % len(colors)])
+    image_path = os.path.join(output_dir, f"scene_{idx}.png")
+    img.save(image_path)
+    return image_path
+
+
+def generate_voice(text, output_path, voice="hi-IN-MadhurNeural"):
+    """Edge TTS se voiceover"""
+    async def _gen():
+        communicate = edge_tts.Communicate(text, voice)
+        await communicate.save(output_path)
+    asyncio.run(_gen())
+    return output_path
+
+
+def get_audio_duration(audio_path):
+    audio = MP3(audio_path)
+    return audio.info.length
+
+
+def _get_filter(effect, duration_sec):
+    total_frames = int(duration_sec * FPS)
+    z_speed = 0.0015
+    
+    if effect == "zoom_in":
+        vf = f"zoompan=z='min(zoom+{z_speed},1.5)':d={total_frames}:s={W}x{H}:fps={FPS}"
+    elif effect == "zoom_out":
+        vf = f"zoompan=z='if(eq(on,0),1.5,max(zoom-{z_speed},1.0))':d={total_frames}:s={W}x{H}:fps={FPS}"
+    elif effect == "pan_right":
+        vf = f"zoompan=z=1.3:x='(iw-iw/zoom)*on/{total_frames}':y='ih/2-(ih/zoom/2)':d={total_frames}:s={W}x{H}:fps={FPS}"
+    elif effect == "pan_left":
+        vf = f"zoompan=z=1.3:x='(iw-iw/zoom)*(1-on/{total_frames})':y='ih/2-(ih/zoom/2)':d={total_frames}:s={W}x{H}:fps={FPS}"
+    elif effect == "pan_up":
+        vf = f"zoompan=z=1.3:x='iw/2-(iw/zoom/2)':y='(ih-ih/zoom)*(1-on/{total_frames})':d={total_frames}:s={W}x{H}:fps={FPS}"
+    elif effect == "pan_down":
+        vf = f"zoompan=z=1.3:x='iw/2-(iw/zoom/2)':y='(ih-ih/zoom)*on/{total_frames}':d={total_frames}:s={W}x{H}:fps={FPS}"
+    else:
+        vf = f"zoompan=z='min(zoom+{z_speed},1.3)':d={total_frames}:s={W}x{H}:fps={FPS}"
+    return vf
+
+
+def create_video_clip(image_path, duration, output_path, effect=None):
+    """Image se video clip (no audio) with Ken Burns effect"""
+    if effect is None:
+        effect = random.choice(EFFECTS)
+    
+    vf = _get_filter(effect, duration)
+    scale_crop = f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H}"
+    full_filter = f"{scale_crop},{vf}"
+    
+    cmd = [FFMPEG, "-y", "-loop", "1", "-i", image_path,
+           "-vf", full_filter, "-c:v", "libx264", "-preset", "ultrafast",
+           "-t", str(duration), "-pix_fmt", "yuv420p", "-an", output_path]
+    
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    if result.returncode != 0:
+        cmd_fb = [FFMPEG, "-y", "-loop", "1", "-i", image_path,
+                  "-vf", scale_crop, "-c:v", "libx264", "-preset", "ultrafast",
+                  "-t", str(duration), "-pix_fmt", "yuv420p", "-an", output_path]
+        subprocess.run(cmd_fb, capture_output=True, text=True, timeout=120)
+    return effect
+
+
+def create_complete_clip(video_clip_path, audio_path, output_path):
+    """
+    Video clip + audio ko jodke ek complete clip banata hai.
+    Ye sabse reliable approach hai.
+    """
+    cmd = [FFMPEG, "-y", "-i", video_clip_path, "-i", audio_path,
+           "-c:v", "libx264", "-preset", "ultrafast",
+           "-c:a", "aac", "-b:a", "128k",
+           "-pix_fmt", "yuv420p",
+           "-shortest", output_path]
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    return result.returncode == 0 and os.path.exists(output_path)
+
+
+def concat_clips(clip_paths, output_path):
+    """
+    Saare complete clips ko ek me jodta hai (concat demuxer).
+    Each clip already has video+audio.
+    """
+    list_file = output_path + "_concat.txt"
+    with open(list_file, "w") as f:
+        for cp in clip_paths:
+            f.write(f"file '{cp}'\n")
+    
+    cmd = [FFMPEG, "-y", "-f", "concat", "-safe", "0", "-i", list_file,
+           "-c:v", "libx264", "-preset", "ultrafast",
+           "-c:a", "aac", "-b:a", "128k",
+           "-pix_fmt", "yuv420p",
+           output_path]
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    
+    try:
+        os.remove(list_file)
+    except:
+        pass
+    
+    return result.returncode == 0 and os.path.exists(output_path)
+
+
+def merge_all_clips(video_clips, audio_paths, output_path):
+    """
+    SIMPLEST APPROACH:
+    1. Har clip me uska audio daalo (complete clip banao)
+    2. Saare complete clips ko concat karo
+    """
+    print("   -> Step 1: Har clip me audio daal raha hai...")
+    complete_clips = []
+    
+    for i in range(len(video_clips)):
+        complete_clip_path = output_path + f"_complete_{i}.mp4"
+        print(f"      Clip {i+1}/{len(video_clips)}: video + audio merge...")
+        
+        success = create_complete_clip(
+            video_clips[i], audio_paths[i], complete_clip_path
+        )
+        
+        if success and os.path.exists(complete_clip_path):
+            complete_clips.append(complete_clip_path)
+            print(f"      -> Success! ({os.path.getsize(complete_clip_path)} bytes)")
+        else:
+            print(f"      -> FAILED! Skipping this clip")
+    
+    if not complete_clips:
+        print("   -> ERROR: Koi bhi complete clip nahi bana!")
+        return False
+    
+    print(f"   -> Step 2: {len(complete_clips)} clips concat ho rahe hain...")
+    success = concat_clips(complete_clips, output_path)
+    
+    # Cleanup
+    for cp in complete_clips:
+        try:
+            os.remove(cp)
+        except:
+            pass
+    
+    if success:
+        print(f"   -> Final video ready! ({os.path.getsize(output_path)} bytes)")
+    else:
+        print("   -> Concat failed! Trying filter-based concat...")
+        # Fallback: filter-based concat
+        _filter_concat(complete_clips, output_path)
+    
+    return os.path.exists(output_path)
+
+
+def _filter_concat(clip_paths, output_path):
+    """Fallback: filter_complex concat"""
+    n = len(clip_paths)
+    if n == 0:
+        return
+    
+    inputs = []
+    for cp in clip_paths:
+        inputs.extend(["-i", cp])
+    
+    video_labels = "".join([f"[{i}:v]" for i in range(n)])
+    audio_labels = "".join([f"[{i}:a]" for i in range(n)])
+    filter_complex = (
+        f"{video_labels}concat=n={n}:v=1:a=0[vout];"
+        f"{audio_labels}concat=n={n}:v=0:a=1[aout]"
+    )
+    
+    cmd = [FFMPEG, "-y", *inputs, "-filter_complex", filter_complex,
+           "-map", "[vout]", "-map", "[aout]",
+           "-c:v", "libx264", "-preset", "ultrafast",
+           "-c:a", "aac", "-b:a", "128k", "-pix_fmt", "yuv420p",
+           output_path]
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    if result.returncode != 0:
+        print(f"   -> Filter concat also failed: {result.stderr[-300:]}")
+        # Last resort: just use first clip
+        if clip_paths:
+            shutil.copy(clip_paths[0], output_path)
+            print("   -> Used first clip as fallback")
+
+
+def generate_video(topic, gemini_key, hf_token, voice="hi-IN-MadhurNeural"):
+    """Pura pipeline: topic -> final video file. Returns (video_path, info_dict)"""
+    work_dir = tempfile.mkdtemp(prefix="video_pipeline_")
+    images_dir = os.path.join(work_dir, "images")
+    audio_dir = os.path.join(work_dir, "audio")
+    clips_dir = os.path.join(work_dir, "clips")
+    for d in [images_dir, audio_dir, clips_dir]:
+        os.makedirs(d, exist_ok=True)
+
+    try:
+        print(f"[1/5] Script likha ja raha hai (Gemini API)...")
+        scenes = generate_scenes(topic, gemini_key, num_scenes=6)
+        total_scenes = len(scenes)
+        print(f"   -> {total_scenes} scenes ban gaye")
+
+        print(f"[2/5] Images ban rahe hain (Pollinations)...")
+        image_paths = []
+        for i, s in enumerate(scenes):
+            image_prompt = s.get("image_prompt", s.get("image", "abstract art"))
+            print(f"   -> Image {i+1}/{total_scenes}...")
+            img_path = generate_image(image_prompt, hf_token, i, images_dir)
+            image_paths.append(img_path)
+        print(f"   -> Saari images ready!")
+
+        print(f"[3/5] Voiceover ban raha hai (Edge TTS)...")
+        audio_paths = []
+        durations = []
+        for i, s in enumerate(scenes):
+            narration = s.get("narration", s.get("text", ""))
+            audio_path = os.path.join(audio_dir, f"scene_{i}.mp3")
+            generate_voice(narration, audio_path, voice)
+            dur = get_audio_duration(audio_path)
+            audio_paths.append(audio_path)
+            durations.append(dur)
+        total_duration = sum(durations)
+        print(f"   -> Total audio: {total_duration:.1f} sec")
+
+        print(f"[4/5] Video clips ban rahe hain (FFmpeg effects)...")
+        clip_paths = []
+        used_effects = []
+        for i in range(total_scenes):
+            clip_path = os.path.join(clips_dir, f"clip_{i}.mp4")
+            effect = create_video_clip(image_paths[i], durations[i], clip_path)
+            used_effects.append(effect)
+            print(f"   -> Clip {i+1}/{total_scenes}: {effect}")
+        
+        print(f"[5/5] Final video assemble ho rahi hai...")
+        final_path = os.path.join(work_dir, "final_video.mp4")
+        success = merge_all_clips(clip_paths, audio_paths, final_path)
+
+        if not success or not os.path.exists(final_path):
+            raise Exception("Final video ban nahi payi!")
+        
+        # Copy to stable path
+        output_path = os.path.join(os.getcwd(), "final_video.mp4")
+        shutil.copy(final_path, output_path)
+
+        # Build info
+        narrations = [s.get("narration", s.get("text", "")) for s in scenes]
+        title = topic[:60] + "..." if len(topic) > 60 else topic
+        catchy_title = narrations[0][:50] + "..." if len(narrations[0]) > 50 else narrations[0]
+        
+        description = f"""{topic}
+
+Scene breakdown:
+""" + "\n".join([f"{i+1}. {narrations[i]}" for i in range(total_scenes)])
+
+        tags = topic.split()[:10]
+        
+        info = {
+            "video_path": output_path,
+            "title": catchy_title,
+            "description": description,
+            "tags": tags,
+            "duration": total_duration,
+            "scenes": narrations,
+            "effects": used_effects,
+        }
+        
+        print(f"\n✅ Video ready! Duration: {total_duration:.1f}s")
+        print(f"   Path: {output_path}")
+        print(f"   Title: {catchy_title}")
+        
+        return output_path, info
+
+    except Exception as e:
+        import traceback
+        print(f"❌ Error: {e}")
+        print(traceback.format_exc()[-500:])
+        return None, None
+    finally:
+        try:
+            shutil.rmtree(work_dir)
+        except:
+            pass
