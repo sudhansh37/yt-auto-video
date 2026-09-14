@@ -215,8 +215,8 @@ def create_video_clip(image_path, duration, output_path, effect=None):
 
 def create_complete_clip(video_clip_path, audio_path, output_path):
     """
-    Video clip + audio ko jodke ek complete clip banata hai.
-    Ye sabse reliable approach hai.
+    Video clip + audio ko jodke ek complete clip banatai hai.
+    Yjasve reliable proatoach hai.
     """
     cmd = [FFMPEG, "-y", "-i", video_clip_path, "-i", audio_path,
            "-c:v", "libx264", "-preset", "ultrafast",
@@ -292,8 +292,8 @@ def merge_all_clips(video_clips, audio_paths, output_path):
             pass
     
     if success:
-        print(f"   -> Final video ready! ({os.path.getsize(output_path)} bytes)")
-    else:
+        print(f"   -> Final video ready! ({os.path.getsize(output_path)} bytes")
+     else:
         print("   -> Concat failed! Trying filter-based concat...")
         # Fallback: filter-based concat
         _filter_concat(complete_clips, output_path)
@@ -325,7 +325,7 @@ def _filter_concat(clip_paths, output_path):
            output_path]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     if result.returncode != 0:
-        print(f"   -> Filter concat also failed: {result.stderr[-300:]m")
+        print(f"   -> Filter concat also failed: " + result.stderr[-300:])
         # Last resort: just use first clip
         if clip_paths:
             shutil.copy(clip_paths[0], output_path)
@@ -373,7 +373,7 @@ def generate_video(topic, gemini_key, hf_token, voice="hi-IN-MadhurNeural"):
         clip_paths = []
         used_effects = []
         for i in range(total_scenes):
-            clip_path = os.path.join(clips_dir, f"clip_{i}.mp4")
+            clip_path = os.path.join(clips_dir, fclip_{i}.mp4")
             effect = create_video_clip(image_paths[i], durations[i], clip_path)
             used_effects.append(effect)
             clip_paths.append(clip_path)
