@@ -224,6 +224,8 @@ def create_complete_clip(video_clip_path, audio_path, output_path):
            "-pix_fmt", "yuv420p",
            "-shortest", output_path]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    if result.returncode != 0:
+        print(f"      ffmpeg stderr: {result.stderr[-300:]}")
     return result.returncode == 0 and os.path.exists(output_path)
 
 
@@ -323,7 +325,7 @@ def _filter_concat(clip_paths, output_path):
            output_path]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     if result.returncode != 0:
-        print(f"   -> Filter concat also failed: {result.stderr[-300:]}")
+        print(f"   -> Filter concat also failed: {result.stderr[-300:]m")
         # Last resort: just use first clip
         if clip_paths:
             shutil.copy(clip_paths[0], output_path)
@@ -374,6 +376,7 @@ def generate_video(topic, gemini_key, hf_token, voice="hi-IN-MadhurNeural"):
             clip_path = os.path.join(clips_dir, f"clip_{i}.mp4")
             effect = create_video_clip(image_paths[i], durations[i], clip_path)
             used_effects.append(effect)
+            clip_paths.append(clip_path)
             print(f"   -> Clip {i+1}/{total_scenes}: {effect}")
         
         print(f"[5/5] Final video assemble ho rahi hai...")
