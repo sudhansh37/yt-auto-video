@@ -1,0 +1,60 @@
+# ================= Hindi Shorts Bot - main config =================
+# Secrets (repo me pehle se lage hain - Actions me):
+#   GEMINI_API_KEY, YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN
+
+channel:
+  # Source channel ke shorts ka page (saare shorts ki list yahan se milti hai)
+  url: "https://www.youtube.com/@zackdfilms/shorts"
+  # Kitne videos yaad rakhne hain (duplicate avoid karne ke liye)
+  max_history: 300
+
+# ---------------- Gemini (video analysis -> Hindi script) ----------------
+gemini:
+  model: "gemini-2.5-flash"       # chaho to "gemini-2.5-pro"
+
+# ---------------- TTS (Hindi voice) ----------------
+# provider: "edge_tts"   -> default, FREE, koi API key nahi (repo me pehle se use ho raha hai)
+# provider: "custom_http"-> apna koi bhi TTS API (template niche)
+# provider: "sarvam"     -> Sarvam AI TTS
+tts:
+  provider: "edge_tts"
+
+  # NO-GAP settings: rate thoda tez + script cleanup (src/tts.py)
+  # taaki voice me awkward pauses na aayein aur robotic na lage
+  edge_tts:
+    voice: "hi-IN-MadhurNeural"   # options: hi-IN-MadhurNeural, hi-IN-SwaraNeural, hi-IN-HemaNeural
+    rate: "+10%"                  # thodi tez bhasha = kam robotic feel
+
+  # APNA TTS API lagana ho to yahan (abhi use nahi ho raha):
+  #   {text}          -> script yahan aa jayegi
+  #   {{TTS_API_KEY}} -> secret "TTS_API_KEY" ki value
+  #   response: "binary" ya "base64_json:audios.0"
+  custom_http:
+    method: "POST"
+    endpoint: "https://your-tts-api.example.com/v1/tts"
+    auth_header: "Bearer {{TTS_API_KEY}}"
+    body:
+      text: "{text}"
+      voice: "hindi_female"
+      audio_format: "mp3"
+    response: "binary"
+
+  sarvam:
+    speaker: "meera"
+    model: "bulbul-v2"
+    speech_rate: 1.1
+
+# ---------------- Video editing effects ----------------
+# Har video pe in me se koi ek effect randomly lagega
+effects:
+  variants: [zoom_in, zoom_out, pan_up, pan_down, ken_burns]
+  saturation: 1.12      # color filter - thoda vibrant
+  contrast: 1.06        # color filter - thoda punchy
+  # preset: "medium"    # (optional) low-memory machine pe "ultrafast" + threads: 1
+  # threads: 1          # GitHub Actions ke liye kuch nahi badalna
+
+# ---------------- YouTube upload ----------------
+youtube:
+  privacy: "public"     # public / unlisted / private
+  category_id: "27"     # 27 = Education
+  tags: ["hindi facts", "shorts", "facts in hindi", "amazing facts"]
