@@ -2,7 +2,7 @@
 
 Cloud IPs (GitHub Actions) pe kabhi kabhi YouTube "Sign in to confirm
 you're not a bot" dikha deta hai. Isliye:
-  1. Kuch alag player clients try karte hain (tv, ios, mweb)
+  1. Kuch alag player clients try karte hain (tv, tv_simply, ios, mweb)
   2. Agar YOUTUBE_COOKIES secret set ho (Netscape cookies.txt ka content),
      to wahi use hota hai - ye 100% reliable fix hai.
      (cookies export kaise kare: https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp)
@@ -13,7 +13,7 @@ from pathlib import Path
 
 import yt_dlp
 
-PLAYER_CLIENT_FALLBACKS = (None, ["tv"], ["ios"], ["mweb"])
+PLAYER_CLIENT_FALLBACKS = (None, ["tv"], ["tv_simply"], ["ios"], ["mweb"])
 
 
 def _write_cookies_if_any():
