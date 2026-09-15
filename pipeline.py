@@ -123,37 +123,76 @@ Return ONLY a valid JSON array, no markdown:
                      f"Check karo: API key sahi hai ya nahi? aistudio.google.com/apikey")
 
 
-def generate_image(prompt, hf_token, idx, output_dir):
-    """Pollinations.ai se image banata hai (free, no API key needed)"""
+def generate_image(prompt, hf_token, idx, output_dir, gemini_key=None):
+    """Pehle Gemini Image API (Nano Banana) try karta hai, fail ho toh Pollinations Flux"""
     import urllib.parse
     
-    enhanced_prompt = prompt + ", white background, clean white backdrop, ultra high quality, 4k, sharp focus, professional photography, studio lighting, vibrant colors, photorealistic"
+    enhanced_prompt = prompt + ", white background, clean white backdrop, ultra high quality, 4k, sharp focus, professional photography, studio lighting, vibrant colors, photorealistic, portrait 4:5 aspect ratio"
+    
+    # === Step 1: Gemini Image API (Nano Banana quality) ===
+    if gemini_key:
+        gemini_models = [
+            "gemini-2.5-flash-image-preview",
+            "gemini-2.5-flash-image",
+            "gemini-2.0-flash-exp-image-generation",
+        ]
+        for model in gemini_models:
+            try:
+                print("      Gemini image try: " + model)
+                url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + gemini_key
+                data = {
+                    "contents": [{"parts": [{"text": "Generate an image: " + enhanced_prompt}]}],
+                    "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]},
+                }
+                resp = requests.post(url, json=data, timeout=90)
+                result = resp.json()
+                
+                if "candidates" in result:
+                    parts = result["candidates"][0]["content"]["parts"]
+                    for part in parts:
+                        if "inlineData" in part:
+                            img_bytes = base64.b64decode(part["inlineData"]["data"])
+                            image = Image.open(BytesIO(img_bytes))
+                            image_path = os.path.join(output_dir, "scene_" + str(idx) + ".png")
+                            image.save(image_path)
+                            print("      Gemini image ban gayi! (" + model + ")")
+                            return image_path
+                    print("      Gemini response me image nahi mili")
+                
+                if "error" in result:
+                    err_msg = result["error"].get("message", "unknown")
+                    print("      Gemini " + model + " error: " + str(err_msg)[:100])
+            except Exception as e:
+                print("      Gemini " + model + " failed: " + str(e)[:100])
+    
+    # === Step 2: Pollinations Flux fallback ===
+    print("      Gemini se image nahi bani, Pollinations Flux try karta hai...")
     encoded_prompt = urllib.parse.quote(enhanced_prompt)
     seed = random.randint(1, 999999)
     
-    url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1280&model=flux&nologo=true&seed={seed}"
+    url = "https://image.pollinations.ai/prompt/" + encoded_prompt + "?width=1024&height=1280&model=flux&nologo=true&seed=" + str(seed)
     
     for attempt in range(3):
         try:
-            print(f"      Pollinations attempt {attempt+1}...")
+            print("      Pollinations attempt " + str(attempt+1) + "...")
             response = requests.get(url, timeout=60)
             if response.status_code == 200 and 'image' in response.headers.get('Content-Type', ''):
                 image = Image.open(BytesIO(response.content))
-                image_path = os.path.join(output_dir, f"scene_{idx}.png")
+                image_path = os.path.join(output_dir, "scene_" + str(idx) + ".png")
                 image.save(image_path)
                 return image_path
             else:
-                print(f"      Status: {response.status_code}")
+                print("      Status: " + str(response.status_code))
                 import time
                 time.sleep(5)
         except Exception as e:
-            print(f"      Error: {e}")
+            print("      Error: " + str(e))
             import time
             time.sleep(5)
     
-    print(f"      Using placeholder image")
+    print("      Using placeholder image")
     img = Image.new("RGB", (1024, 1280), color=(255, 255, 255))
-    image_path = os.path.join(output_dir, f"scene_{idx}.png")
+    image_path = os.path.join(output_dir, "scene_" + str(idx) + ".png")
     img.save(image_path)
     return image_path
 
@@ -395,7 +434,7 @@ def generate_video(topic, gemini_key, hf_token, voice="hi-IN-MadhurNeural"):
         for i, s in enumerate(scenes):
             image_prompt = s.get("image_prompt", s.get("image", "abstract art"))
             print(f"   -> Image {i+1}/{total_scenes}...")
-            img_path = generate_image(image_prompt, hf_token, i, images_dir)
+            img_path = generate_image(image_prompt, hf_token, i, images_dir, gemini_key)
             image_paths.append(img_path)
         print(f"   -> Saari images ready!")
 
