@@ -1,22 +1,41 @@
-name: Daily YouTube Video
+# Hindi Shorts Bot - scheduled publisher (Zack D. Films -> Hindi Shorts)
+#
+# Din me 2 baar publish:
+#   10:00 AM IST = 04:30 UTC
+#   06:00 PM IST = 12:30 UTC
+# TIME CHANGE KARNA HO TO niche cron lines edit karo (UTC me hota hai,
+# IST se 5 ghante 30 minute peeche).
+
+name: publish-short
 
 on:
   schedule:
-    # Har roz subah 10:00 IST (IST = UTC+5:30, so 4:30 UTC)
-    - cron: '30 4 * * *'
-  workflow_dispatch:  # Manual trigger ke liye (Actions tab se dabao)
+    - cron: "30 4 * * *"     # 10:00 AM IST
+    - cron: "30 12 * * *"    # 06:00 PM IST
+  workflow_dispatch:          # repo -> Actions -> manual "Run workflow" button bhi
+    inputs:
+      mode:
+        description: "Video selection mode"
+        required: false
+        default: "mix"
+        type: choice
+        options: [mix, latest, random]
+
+permissions:
+  contents: write   # data/history.json commit karne ke liye
+
+concurrency:
+  group: publish-short
+  cancel-in-progress: false
 
 jobs:
-  generate-and-upload:
+  publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
+    timeout-minutes: 30
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
@@ -26,22 +45,25 @@ jobs:
           sudo apt-get install -y -qq ffmpeg
 
       - name: Install Python packages
-        run: |
-          pip install --quiet edge-tts mutagen requests Pillow imageio-ffmpeg
+        run: pip install --quiet -r requirements.txt
 
-      - name: Generate video and upload to YouTube
+      - name: Run pipeline
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
-          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
-          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          YT_CLIENT_ID:        ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET:    ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN:    ${{ secrets.YT_REFRESH_TOKEN }}
           VOICE: hi-IN-MadhurNeural
-        run: python generate_and_upload.py
+        run: python src/main.py "${{ github.event.inputs.mode || 'mix' }}"
 
-      - name: Upload video as artifact (backup)
-        uses: actions/upload-artifact@v4
-        with:
-          name: daily-video
-          path: final_video.mp4
-          retention-days: 7
+      - name: Save history (duplicates avoid)
+        run: |
+          git config user.name  "shorts-bot"
+          git config user.email "action@github.com"
+          git add data/history.json
+          if git diff --cached --quiet; then
+            echo "No history change - skip commit"
+          else
+            git commit -m "chore: mark video as used [skip ci]"
+            git push
+          fi
