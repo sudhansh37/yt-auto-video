@@ -11,6 +11,9 @@ import subprocess
 import asyncio
 import requests
 import edge_tts
+import base64
+import wave
+import array
 from mutagen.mp3 import MP3
 from PIL import Image
 from io import BytesIO
@@ -24,9 +27,9 @@ try:
 except Exception:
     FFMPEG = "ffmpeg"
 
-W, H = 1080, 1920  # 9:16 Shorts
+W, H = 1080, 1350  # 4:5 Instagram format
 FPS = 25
-EFFECTS = ["zoom_in", "zoom_out", "pan_right", "pan_left", "pan_up", "pan_down"]
+EFFECTS = ["zoom_in", "zoom_out"]
 
 
 def generate_scenes(topic, api_key, num_scenes=6):
@@ -50,7 +53,7 @@ Rules:
 - image_prompt should be in English, describing a visual that matches the narration
 - Make it engaging, fast-paced, and informative
 
-RETURN ONLY a valid JSON array, no markdown:
+Return ONLY a valid JSON array, no markdown:
 [
   {{"narration": "Namaste dosto...", "image_prompt": "Indian person waving, bright background"}},
   ...
@@ -124,11 +127,11 @@ def generate_image(prompt, hf_token, idx, output_dir):
     """Pollinations.ai se image banata hai (free, no API key needed)"""
     import urllib.parse
     
-    enhanced_prompt = prompt + ", high quality, cinematic lighting, 4k, detailed, vibrant colors"
+    enhanced_prompt = prompt + ", white background, clean white backdrop, ultra high quality, 4k, sharp focus, professional photography, studio lighting, vibrant colors, photorealistic"
     encoded_prompt = urllib.parse.quote(enhanced_prompt)
     seed = random.randint(1, 999999)
     
-    url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=768&height=1344&nologo=true&seed={seed}"
+    url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1280&model=flux&nologo=true&seed={seed}"
     
     for attempt in range(3):
         try:
@@ -149,15 +152,59 @@ def generate_image(prompt, hf_token, idx, output_dir):
             time.sleep(5)
     
     print(f"      Using placeholder image")
-    colors = [(30, 60, 120), (120, 30, 60), (60, 120, 30), (120, 60, 30)]
-    img = Image.new("RGB", (768, 1344), color=colors[idx % len(colors)])
+    img = Image.new("RGB", (1024, 1280), color=(255, 255, 255))
     image_path = os.path.join(output_dir, f"scene_{idx}.png")
     img.save(image_path)
     return image_path
 
 
+HF_TTS_URL = "https://router.huggingface.co/hf-inference/models/facebook/mms-tts-hin"
+
+
 def generate_voice(text, output_path, voice="hi-IN-MadhurNeural"):
-    """Edge TTS se voiceover"""
+    """Pehle HF TTS model (mms-tts-hin) try karta hai, fail ho toh Edge TTS fallback"""
+    hf_token = os.environ.get("HF_TOKEN", "")
+    if hf_token and text.strip():
+        try:
+            headers = {"Authorization": "Bearer " + hf_token}
+            resp = requests.post(HF_TTS_URL, json={"inputs": text},
+                                 headers=headers, timeout=90)
+            if resp.status_code == 200 and len(resp.content) > 500:
+                ct = resp.headers.get("Content-Type", "")
+                raw_path = output_path + "_raw"
+                if "json" in ct:
+                    data = resp.json()
+                    audio_bytes = base64.b64decode(data.get("audio", ""))
+                    sr = int(data.get("sampling_rate", 16000))
+                    samples = array.array("f", audio_bytes)
+                    pcm = array.array(
+                        "h",
+                        (int(max(-1.0, min(1.0, s)) * 32767.0) for s in samples),
+                    )
+                    with wave.open(raw_path, "wb") as wf:
+                        wf.setnchannels(1)
+                        wf.setsampwidth(2)
+                        wf.setframerate(sr)
+                        wf.writeframes(pcm.tobytes())
+                else:
+                    with open(raw_path, "wb") as f:
+                        f.write(resp.content)
+                cmd = [FFMPEG, "-y", "-i", raw_path,
+                       "-c:a", "libpp3lame", "-b:a", "128k", output_path]
+                r = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                try:
+                    os.remove(raw_path)
+                except:
+                    pass
+                if r.returncode == 0 and os.path.exists(output_path) and os.path.getsize(output_path) > 2000:
+                    print("      Voice: HF model (mms-tts-hin) se ban gayi")
+                    return output_path
+            else:
+                print("      HF TTS response nahi mila, Edge TTS try karta hai...")
+        except Exception as e:
+            print("      HF TTS failed: " + str(e)[:100] + " | Edge TTS try karta hai...")
+    
+    # Edge TTS fallback
     async def _gen():
         communicate = edge_tts.Communicate(text, voice)
         await communicate.save(output_path)
@@ -171,23 +218,15 @@ def get_audio_duration(audio_path):
 
 
 def _get_filter(effect, duration_sec):
+    """Sirf smooth center-zoom effects - koi side/bottom pan nahi"""
     total_frames = int(duration_sec * FPS)
-    z_speed = 0.0015
+    z_speed = 0.0008  # slow cinematic zoom
+    center = "x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
     
-    if effect == "zoom_in":
-        vf = f"zoompan=z='min(zoom+{z_speed},1.5)':d={total_frames}:s={W}x{H}:fps={FPS}"
-    elif effect == "zoom_out":
-        vf = f"zoompan=z='if(eq(on,0),1.5,max(zoom-{z_speed},1.0))':d={total_frames}:s={W}x{H}:fps={FPS}"
-    elif effect == "pan_right":
-        vf = f"zoompan=z=1.3:x='(iw-iw/zoom)*on/{total_frames}':y='ih/2-(ih/zoom/2)':d={total_frames}:s={W}x{H}:fps={FPS}"
-    elif effect == "pan_left":
-        vf = f"zoompan=z=1.3:x='(iw-iw/zoom)*(1-on/{total_frames})':y='ih/2-(ih/zoom/2)':d={total_frames}:s={W}x{H}:fps={FPS}"
-    elif effect == "pan_up":
-        vf = f"zoompan=z=1.3:x='iw/2-(iw/zoom/2)':y='(ih-ih/zoom)*(1-on/{total_frames})':d={total_frames}:s={W}x{H}:fps={FPS}"
-    elif effect == "pan_down":
-        vf = f"zoompan=z=1.3:x='iw/2-(iw/zoom/2)':y='(ih-ih/zoom)*on/{total_frames}':d={total_frames}:s={W}x{H}:fps={FPS}"
+    if effect == "zoom_out":
+        vf = f"zoompan=z='if(eq(on,0),1.25,max(zoom-{z_speed},1.0))':{center}:d={total_frames}:s={W}x{H}:fps={FPS}"
     else:
-        vf = f"zoompan=z='min(zoom+{z_speed},1.3)':d={total_frames}:s={W}x{H}:fps={FPS}"
+        vf = f"zoompan=z='min(zoom+{z_speed},1.25)':{center}:d={total_frames}:s={W}x{H}:fps={FPS}"
     return vf
 
 
