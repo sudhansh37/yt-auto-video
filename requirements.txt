@@ -1,5 +1,8 @@
-edge-tts
+yt-dlp
 requests
+PyYAML
+google-genai
+edge-tts
 mutagen
 Pillow
 imageio-ffmpeg
