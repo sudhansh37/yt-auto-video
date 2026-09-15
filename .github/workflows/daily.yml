@@ -39,6 +39,11 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install Deno (yt-dlp ka JS runtime - bina iske YouTube formats missing hote hain)
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
       - name: Install FFmpeg
         run: |
           sudo apt-get update -qq
@@ -53,6 +58,7 @@ jobs:
           YT_CLIENT_ID:        ${{ secrets.YT_CLIENT_ID }}
           YT_CLIENT_SECRET:    ${{ secrets.YT_CLIENT_SECRET }}
           YT_REFRESH_TOKEN:    ${{ secrets.YT_REFRESH_TOKEN }}
+          YOUTUBE_COOKIES:     ${{ secrets.YOUTUBE_COOKIES }}
           VOICE: hi-IN-MadhurNeural
         run: python src/main.py "${{ github.event.inputs.mode || 'mix' }}"
 
