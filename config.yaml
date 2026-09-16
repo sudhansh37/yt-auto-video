@@ -1,6 +1,7 @@
 # ================= Hindi Shorts Bot - main config =================
 # Secrets (repo me pehle se lage hain - Actions me):
-#   GEMINI_API_KEY, YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN, YOUTUBE_COOKIES
+#   GEMINI_API_KEY, YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN,
+#   YOUTUBE_COOKIES, HF_TOKEN (parler TTS ke liye)
 
 channel:
   # Source channel ke shorts ka page (saare shorts ki list yahan se milti hai)
@@ -13,19 +14,26 @@ gemini:
   model: "gemini-3.6-flash"       # chaho to "gemini-3.6-pro"
 
 # ---------------- TTS (Hindi voice) ----------------
-# provider: "edge_tts"   -> default, FREE, koi API key nahi (repo me pehle se use ho raha hai)
+# provider: "parler"    -> AI4Bharat Indic Parler-TTS - FREE, natural "Aman"
+#                          voice (HuggingFace space, koi API key nahi).
+#                          Fail hone pe khud edge-tts pe fallback ho jata hai.
+# provider: "edge_tts"  -> Microsoft Edge TTS (free) - Madhur voice
 # provider: "custom_http"-> apna koi bhi TTS API (template niche)
-# provider: "sarvam"     -> Sarvam AI TTS
 tts:
-  provider: "edge_tts"
+  provider: "parler"
 
-  # NO-GAP settings: rate thoda tez + script cleanup (src/tts.py)
-  # taaki voice me awkward pauses na aayein aur robotic na lage
+  parler:
+    space: "ai4bharat/indic-parler-tts"
+    # Voice description me hi speaker ka naam jaata hai.
+    # Hindi voices: Aman, Rohit (male) / Divya, Rani (female)
+    voice_desc: "Aman speaks in an expressive and energetic tone, at a slightly fast pace, in a very clear recording with no background noise."
+
+  # FALLBACK (agar parler space busy/fail ho to ye use hota hai)
   edge_tts:
     voice: "hi-IN-MadhurNeural"   # options: hi-IN-MadhurNeural, hi-IN-SwaraNeural, hi-IN-HemaNeural
     rate: "+12%"                  # thodi tez bhasha = kam robotic feel
 
-  # APNA TTS API lagana ho to yahan (abhi use nahi ho raha):
+  # APNA TTS API lagana ho to provider: "custom_http" karke yahan bharo:
   #   {text}          -> script yahan aa jayegi
   #   {{TTS_API_KEY}} -> secret "TTS_API_KEY" ki value
   #   response: "binary" ya "base64_json:audios.0"
