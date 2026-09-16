@@ -2,10 +2,11 @@
 Hindi Shorts Bot - main pipeline
 ================================
 1. Source channel se ek short pick karo (latest / random / mix) - duplicates skip
-2. yt-dlp se download karo
-3. Gemini se video analysis -> Hindi script + title + description
+2. yt-dlp se download karo (full HD vertical)
+3. Gemini se video analysis -> Hindi script + Hinglish caption + title + description
 4. TTS se Hindi voice banao (original audio hata diya jata hai)
-5. ffmpeg: 9:16 white canvas + zoom/pan effect + color filter, TTS voice ke saath
+5. ffmpeg: 9:16 crop + white canvas + Hinglish caption + zoom/pan effect
+   + color filter + speed boost + background beat
 6. YouTube Data API se Short upload karo
 7. history.json me video id save karo (isliye kabhi duplicate nahi)
 
@@ -84,14 +85,18 @@ def main():
     print("Gemini se analysis ho rahi hai...")
     analysis = analyze_video(src, duration, cfg["gemini"])
     print(f"  Title: {analysis['title']}")
+    print(f"  Caption: {analysis.get('caption', '')}")
 
     # ---- 4. TTS (Hindi voice, no-gap cleanup ke saath) ----
     audio = synthesize(analysis["script"], cfg["tts"], work / "voice.mp3")
     print(f"Hindi voice ready: {audio.name}")
 
-    # ---- 5. edit: 9:16 white background + effect + filter ----
+    # ---- 5. edit: 9:16 crop + white bg + caption + effect + speed ----
     variant = random.choice(cfg["effects"]["variants"])
-    out = edit_video(src, audio, work / "final.mp4", variant, cfg["effects"])
+    out = edit_video(
+        src, audio, work / "final.mp4", variant, cfg["effects"],
+        caption=analysis.get("caption"),
+    )
     print(f"Edit complete (effect={variant}) -> {out.name}")
 
     # ---- 6. YouTube upload ----
