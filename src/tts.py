@@ -1,9 +1,12 @@
 """TTS module - Hindi voice banata hai.
 
 Providers (config.yaml me choose karo):
-  - "edge_tts"    : Microsoft Edge TTS (default - free, koi API key nahi)
-  - "custom_http" : apna koi bhi TTS API (template config.yaml me)
-  - "sarvam"      : Sarvam AI TTS example
+  - "parler"    : AI4Bharat Indic Parler-TTS (HuggingFace Space) - FREE,
+                  natural/native Hindi voices (Aman, Rohit, Divya, Rani).
+                  Agar space busy/fail ho to automatically edge-tts fallback.
+  - "edge_tts"  : Microsoft Edge TTS (free, no key) - Madhur voice
+  - "custom_http": apna koi bhi TTS API (template config.yaml me)
+  - "sarvam"    : Sarvam AI TTS example
 
 NO-GAP FIX (robotic voice / spaces ka ilaaj):
   Voice ke beech spaces isliye aate hain:
@@ -12,7 +15,6 @@ NO-GAP FIX (robotic voice / spaces ka ilaaj):
   clean_for_speech() in sab ko fix karta hai:
     - faltu pause cheezein hata deta hai
     - sentence-enders ko comma me badal deta hai (pause chhoti ho jati hai)
-  + rate thodi tez rakhte hain, taki bol ek flow me chale.
 """
 import asyncio
 import copy
@@ -55,7 +57,16 @@ def synthesize(text, tts_cfg, out_path):
     if not text:
         raise RuntimeError("TTS ke liye script khali hai!")
 
-    provider = tts_cfg.get("provider", "edge_tts")
+    provider = tts_cfg.get("provider", "parler")
+
+    if provider == "parler":
+        try:
+            return _parler(text, tts_cfg.get("parler", {}), out_path)
+        except Exception as e:  # noqa: BLE001
+            print(f"WARNING: Parler TTS fail hua ({e})")
+            print("         edge-tts pe fallback kar raha hoon (Madhur voice)...")
+            return _edge_tts(text, tts_cfg.get("edge_tts", {}), out_path)
+
     if provider == "edge_tts":
         return _edge_tts(text, tts_cfg.get("edge_tts", {}), out_path)
     if provider == "custom_http":
@@ -63,6 +74,44 @@ def synthesize(text, tts_cfg, out_path):
     if provider == "sarvam":
         return _sarvam(text, tts_cfg.get("sarvam", {}), out_path)
     raise ValueError(f"Unknown TTS provider: {provider!r}")
+
+
+def _parler(text, cfg, out_path):
+    """AI4Bharat Indic Parler-TTS via HuggingFace Space (FREE, koi API key
+    zaroori nahi - natural 'Aman' jaisi Hindi voices).
+
+    - Space pe queue lag sakti hai: 30-60 sec video ke liye 1-4 min lagta hai
+    - HF_TOKEN (agar set ho) se rate-limit better rehti hai
+    - Lambi script automatic chunks me generate hoti hai (space handle karta hai)
+    """
+    import shutil
+
+    from gradio_client import Client
+
+    space = cfg.get("space", "ai4bharat/indic-parler-tts")
+    # voice description me hi speaker ka naam hota hai (Aman/Rohit/Divya/Rani)
+    desc = cfg.get(
+        "voice_desc",
+        "Aman speaks in an expressive and energetic tone, at a slightly fast "
+        "pace, in a very clear recording with no background noise.",
+    )
+
+    last_err = None
+    for api_name in ("/generate_finetuned", "/generate_base"):
+        try:
+            client = Client(space, token=os.environ.get("HF_TOKEN") or None)
+            result = client.predict(
+                text=text, description=desc, api_name=api_name
+            )
+            path = result[0] if isinstance(result, (tuple, list)) else result
+            if path and Path(path).exists() and Path(path).stat().st_size > 1000:
+                shutil.copy(path, out_path)
+                return out_path
+        except Exception as e:  # noqa: BLE001 - finetuned -> base fallback
+            last_err = e
+            continue
+
+    raise RuntimeError(f"Parler TTS (space) fail: {last_err}")
 
 
 async def _edge_tts_async(text, cfg, out_path):
