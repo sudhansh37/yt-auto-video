@@ -53,7 +53,7 @@ def analyze_video(video_path, duration_s, gemini_cfg):
     if f.state.name != "ACTIVE":
         raise RuntimeError(f"Gemini file state unexpected: {f.state.name}")
 
-    model = gemini_cfg.get("model", "gemini-2.5-flash")
+    model = gemini_cfg.get("model", "gemini-3.6-flash")
     prompt = PROMPT.format(duration=int(duration_s), words=int(duration_s * 2.5))
 
     resp = client.models.generate_content(
