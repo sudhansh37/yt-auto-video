@@ -10,7 +10,7 @@ channel:
 
 # ---------------- Gemini (video analysis -> Hindi script) ----------------
 gemini:
-  model: "gemini-2.5-flash"       # chaho to "gemini-2.5-pro"
+  model: "gemini-3.6-flash"       # chaho to "gemini-3.6-pro"
 
 # ---------------- TTS (Hindi voice) ----------------
 # provider: "edge_tts"   -> default, FREE, koi API key nahi (repo me pehle se use ho raha hai)
