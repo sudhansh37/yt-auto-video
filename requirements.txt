@@ -3,6 +3,7 @@ requests
 PyYAML
 google-genai
 edge-tts
+gradio_client
 mutagen
 Pillow
 imageio-ffmpeg
