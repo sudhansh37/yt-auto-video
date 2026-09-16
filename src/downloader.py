@@ -2,10 +2,12 @@
 
 Cloud IPs (GitHub Actions) pe kabhi kabhi YouTube "Sign in to confirm
 you're not a bot" dikha deta hai. Isliye:
-  1. Kuch alag player clients try karte hain (tv, tv_simply, ios, mweb)
-  2. Agar YOUTUBE_COOKIES secret set ho (Netscape cookies.txt ka content),
+  1. Agar YOUTUBE_COOKIES secret set ho (Netscape cookies.txt ka content),
      to wahi use hota hai - ye 100% reliable fix hai.
      (cookies export kaise kare: https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp)
+  2. Kuch alag player clients try karte hain (tv, tv_simply, ios, mweb)
+  3. remote_components ejs:github -> YouTube ka n-challenge solve hota hai,
+     warna formats missing ho jaate hain ("Only images are available").
 """
 import os
 import tempfile
@@ -32,6 +34,9 @@ def list_short_ids(channel_url):
         "extract_flat": True,
         "skip_download": True,
         "quiet": True,
+        # EJS challenge solver (GitHub se fetch hota hai) - iske bina
+        # YouTube ka n-challenge solve nahi hota aur formats missing rehte hain
+        "remote_components": ["ejs:github"],
         "cookiefile": _write_cookies_if_any(),
     }
     opts = {k: v for k, v in opts.items() if v}
@@ -48,6 +53,8 @@ def _download_attempt(video_id, out_dir, client):
         "outtmpl": str(out_dir / "source.%(ext)s"),
         "merge_output_format": "mp4",
         "quiet": True,
+        # EJS challenge solver - n-challenge solve karke saare formats milte hain
+        "remote_components": ["ejs:github"],
         "cookiefile": _write_cookies_if_any(),
     }
     if client:
