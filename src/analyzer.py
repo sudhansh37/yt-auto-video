@@ -1,8 +1,9 @@
 """Gemini video analysis -> Hindi narration script + title + description.
 
 Video Gemini Files API se upload hoti hai, phir model se JSON response
-manga jata hai: {"title": ..., "description": ..., "script": ...}
-Script Devanagari Hindi me hoti hai, video ki duration se match karti hui.
+manga jata hai: {"title", "caption", "description", "script"}
+ - script   : Devanagari Hindi, video ki duration se match
+ - caption  : Hinglish (Roman script) on-screen hook line
 """
 import json
 import os
@@ -30,8 +31,9 @@ Rules:
 
 Return ONLY a JSON object with exactly these keys:
 {{
-  "title": "catchy Hindi title, max 90 characters",
-  "description": "1-2 line Hindi description + 3-5 hashtags",
+  "title": "catchy Hindi title (Devanagari), max 90 characters",
+  "caption": "Hinglish hook line (Roman/Latin script only, NO Devanagari) - max 5 words, short and punchy, ye video ke top pe bade text me dikhega",
+  "description": "2-3 line Hindi description (Devanagari) + neeche 8-10 hashtags mix karo: #shorts #facts #viral #hindifacts #amazingfacts ke saath video ke topic ke 4-5 specific hashtags",
   "script": "poora Hindi narration script, Devanagari me"
 }}
 """
