@@ -1,6 +1,6 @@
 # ================= Hindi Shorts Bot - main config =================
 # Secrets (repo me pehle se lage hain - Actions me):
-#   GEMINI_API_KEY, YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN
+#   GEMINI_API_KEY, YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN, YOUTUBE_COOKIES
 
 channel:
   # Source channel ke shorts ka page (saare shorts ki list yahan se milti hai)
@@ -23,7 +23,7 @@ tts:
   # taaki voice me awkward pauses na aayein aur robotic na lage
   edge_tts:
     voice: "hi-IN-MadhurNeural"   # options: hi-IN-MadhurNeural, hi-IN-SwaraNeural, hi-IN-HemaNeural
-    rate: "+10%"                  # thodi tez bhasha = kam robotic feel
+    rate: "+12%"                  # thodi tez bhasha = kam robotic feel
 
   # APNA TTS API lagana ho to yahan (abhi use nahi ho raha):
   #   {text}          -> script yahan aa jayegi
@@ -42,14 +42,15 @@ tts:
   sarvam:
     speaker: "meera"
     model: "bulbul-v2"
-    speech_rate: 1.1
+    speech_rate: 1.15
 
-# ---------------- Video editing effects ----------------
-# Har video pe in me se koi ek effect randomly lagega
+# ---------------- Video editing ----------------
 effects:
   variants: [zoom_in, zoom_out, pan_up, pan_down, ken_burns]
-  saturation: 1.12      # color filter - thoda vibrant
-  contrast: 1.06        # color filter - thoda punchy
+  saturation: 1.15      # color filter - thoda vibrant
+  contrast: 1.08        # color filter - thoda punchy
+  video_speed: 1.15     # video thodi tez (1.0 = normal, 1.3 = bahut tez)
+  bgm_volume: 0.18      # background beat volume (0 = beat band, 0.25 = zyada)
   # preset: "medium"    # (optional) low-memory machine pe "ultrafast" + threads: 1
   # threads: 1          # GitHub Actions ke liye kuch nahi badalna
 
@@ -57,4 +58,4 @@ effects:
 youtube:
   privacy: "public"     # public / unlisted / private
   category_id: "27"     # 27 = Education
-  tags: ["hindi facts", "shorts", "facts in hindi", "amazing facts"]
+  tags: ["hindi facts", "shorts", "facts in hindi", "amazing facts", "viral facts"]
