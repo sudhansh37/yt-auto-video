@@ -1,16 +1,18 @@
 """TTS module - Hindi voice banata hai.
 
 Providers (config.yaml me choose karo):
-  - "edge_tts"    : Microsoft Edge TTS (default - yt-auto-video repo me pehle se use
-                    ho raha hai, FREE, koi API key nahi chahiye)
+  - "edge_tts"    : Microsoft Edge TTS (default - free, koi API key nahi)
   - "custom_http" : apna koi bhi TTS API (template config.yaml me)
   - "sarvam"      : Sarvam AI TTS example
 
-NO-GAP FIX (robotic voice ka ilaaj):
-  Voice robotic isliye lagti hai ki TTS text me faltu pause cheezein hoti hain -
-  ellipses (...), dashes, extra commas, paragraph breaks. clean_for_speech()
-  in sab ko hata deta hai, aur edge-tts me thoda +rate laga dete hain jisse
-  narration ek hi flow me, bina awkward gaps ke chale.
+NO-GAP FIX (robotic voice / spaces ka ilaaj):
+  Voice ke beech spaces isliye aate hain:
+    1. Text me ellipses (...), dashes, extra commas, line breaks hote hain
+    2. Sentence-end (purna viram "," / ".") pe TTS lambi pause leta hai
+  clean_for_speech() in sab ko fix karta hai:
+    - faltu pause cheezein hata deta hai
+    - sentence-enders ko comma me badal deta hai (pause chhoti ho jati hai)
+  + rate thodi tez rakhte hain, taki bol ek flow me chale.
 """
 import asyncio
 import copy
@@ -23,20 +25,26 @@ import requests
 
 def clean_for_speech(text):
     """TTS text se faltu pause banane wali cheezein hata do."""
-    # ellipses (..., …) -> single full stop (ye TTS me lambi pause banata hai)
+    # ellipses (..., …) -> single full stop (ye TTS me sabse lambi pause banata hai)
     text = re.sub(r"\.{2,}", ".", text)
     text = text.replace("…", ".")
     # dashes (-, –, —) jo beech me pause banate hain
     text = re.sub(r"\s*[-–—]\s*", " ", text)
     # emojis hatao (kuch TTS engines inpe atak jaate hain)
     text = re.sub(r"[\U0001F300-\U0001FAFF\u2600-\u27BF\uFE0F]", "", text)
-    # repeated punctuation -> single (multiple ! ? robotic lagti hai)
+    # repeated punctuation -> single
     text = re.sub(r"([!?।,])\1+", r"\1", text)
     # extra commas (har comma ek pause hota hai)
     text = re.sub(r",\s*,", ",", text)
     # newlines / multiple spaces -> single space (paragraph gap hata ke flow me)
     text = re.sub(r"\s+", " ", text)
-    return text.strip()
+    # NO-GAP: sentence end (। aur .) ko comma bana do -
+    # isse lambi pause chhoti ho jati hai aur bol ek flow me chalta hai
+    text = text.replace("।", ",").replace(".", ",")
+    # ab double commas/punctuation jama na ho
+    text = re.sub(r",\s*,", ",", text)
+    text = re.sub(r",\s*([!?])", r" \1", text)
+    return text.strip(" ,").strip()
 
 
 def synthesize(text, tts_cfg, out_path):
@@ -62,7 +70,7 @@ async def _edge_tts_async(text, cfg, out_path):
 
     # VOICE env (workflow se aata hai) config ko override karta hai
     voice = os.environ.get("VOICE") or cfg.get("voice", "hi-IN-MadhurNeural")
-    rate = cfg.get("rate", "+10%")
+    rate = cfg.get("rate", "+12%")
     communicate = edge_tts.Communicate(text, voice, rate=rate)
     await communicate.save(str(out_path))
 
@@ -120,7 +128,7 @@ def _sarvam(text, cfg, out_path):
             "text": text,
             "speaker": cfg.get("speaker", "meera"),
             "model": cfg.get("model", "bulbul-v2"),
-            "speech_rate": cfg.get("speech_rate", 1.1),
+            "speech_rate": cfg.get("speech_rate", 1.15),
         },
         timeout=300,
     )
