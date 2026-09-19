@@ -1,12 +1,13 @@
 # Hindi Shorts Bot (Zack D. Films -> Hindi YouTube Shorts)
 
-Automated pipeline: **Zack D. Films ki shorts -> Gemini analysis -> Hindi TTS
-voice -> 9:16 white-background edit (zoom/pan effects) -> YouTube Shorts
-scheduled upload (din me 2 baar)**. Sab kuch GitHub Actions pe chalta hai.
+Automated pipeline: **Zack D. Films ki shorts -> Gemini analysis -> IndicF5 Hindi
+voice -> 9:16 edit (English caption cover + Hinglish caption + effects + slow
+music) -> YouTube Shorts scheduled upload (din me 4 baar)**. Sab kuch GitHub
+Actions pe chalta hai.
 
 > Note: ye repo pehle se lage secrets use karta hai — `GEMINI_API_KEY`,
-> `YT_CLIENT_ID`, `YT_CLIENT_SECRET`, `YT_REFRESH_TOKEN`. Koi nayi key
-> lagane ki zaroorat nahi hai.
+> `YT_CLIENT_ID`, `YT_CLIENT_SECRET`, `YT_REFRESH_TOKEN`, `HF_TOKEN`.
+> Koi nayi key lagane ki zaroorat nahi hai.
 
 ```
 channel se short pick (duplicate check)      [src/downloader.py + src/history.py]
@@ -16,20 +17,24 @@ yt-dlp se download
         |
         v
 Gemini se video analysis -> Hindi script    [src/analyzer.py]
-+ title + description (JSON me)
++ Hinglish script + title + description
++ 503 "high demand" aaye to retry + fallback models
         |
         v
-edge-tts se Hindi voice                     [src/tts.py]
+IndicF5 se near-human Hindi voice           [src/tts.py]
+(AI4Bharat official space -> mirrors -> Parler -> edge-tts fallback chain)
 (original audio hata diya jata hai)
-NO-GAP fix: script cleanup + fast rate,
-taaki voice robotic na lage
         |
         v
 ffmpeg edit:                                [src/editor.py]
   - 1080x1920 (9:16 Shorts/Reels format)
   - upar-neeche WHITE background
-  - zoom in / zoom out / pan up / pan down / ken burns effect
-  - color filter (saturation + contrast)
+  - English caption pe WHITE PATTI + uspe time-synced Hinglish caption
+    (jo TTS bol raha hai wahi screen pe dikhta hai)
+  - strong zoom in / zoom out / pan / ken burns (zoom_amount: 0.28)
+  - color grade: saturation + contrast + brightness
+  - sharpness filter (unsharp)
+  - slow lo-fi background music (ffmpeg synth - copyright free)
         |
         v
 YouTube pe Short upload                     [src/uploader.py]
@@ -41,17 +46,17 @@ history.json save (ye video dobara nahi)    -> GitHub pe auto-commit
 ## Publish time change karna
 
 `.github/workflows/daily.yml` me `cron:` lines edit karo.
-**cron UTC me hota hai, IST se 5:30 ghante peeche.**
+**cron UTC me hota hai, IST se 5 ghante 30 minute peeche.**
+
+Default: **din me 4 videos, subah 8 se shaam 5 ke beech** —
+08:15 AM, 11:00 AM, 01:45 PM, 04:30 PM IST.
 
 | Aapka IST time | cron (UTC)     |
-|----------------|----------------|
-| 09:00 AM       | `"0 3 * * *"`  |
-| 10:00 AM       | `"30 4 * * *"` |
-| 01:00 PM       | `"30 7 * * *"` |
-| 06:00 PM       | `"30 12 * * *"` |
-| 09:00 PM       | `"30 15 * * *"` |
-
-Default: **10:00 AM + 06:00 PM IST** (din me 2 videos).
+|----------------|-----------------|
+| 08:15 AM       | `"45 2 * * *"`  |
+| 11:00 AM       | `"30 5 * * *"`  |
+| 01:45 PM       | `"15 8 * * *"`  |
+| 04:30 PM       | `"0 11 * * *"`  |
 
 ## Manual run (pehli baar test)
 
@@ -70,17 +75,54 @@ rakh lo — output pasand aaye tab `public` kar dena.
 Duplicate kabhi nahi hota: `data/history.json` track karta hai, har run ke
 baad GitHub pe commit hota hai. `max_history: 300` full hone pe reset.
 
-## TTS / voice
+## TTS / voice (IndicF5)
 
-- Default: **edge-tts** (free) — `hi-IN-MadhurNeural`, `rate: "+10%"`.
-  Voice change karni ho to `config.yaml` me `tts.edge_tts.voice`
-  (options: `hi-IN-MadhurNeural`, `hi-IN-SwaraNeural`, `hi-IN-HemaNeural`).
-- **Robotic/gap problem ka fix**: `src/tts.py` ka `clean_for_speech()` script
-  me se ellipses, dashes, extra commas, paragraph breaks hata deta hai
-  (ye sab TTS me lambi pause banate hain). Gemini prompt bhi "no pause
-  markers" ke liye set hai. Zyada/kam speed chahiye to `rate` adjust karo.
-- Apna TTS API lagana ho: `config.yaml` me `provider: "custom_http"` karke
-  endpoint/keys bharo (template ready hai).
+- Default: **AI4Bharat IndicF5** — near-human natural Hindi. Voice-clone
+  model hai, isliye AI4Bharat ke official prompt audios use hote hain.
+- Voice change karni ho to `config.yaml` me `tts.indicf5.voice`:
+  - `punjabi_female_happy` (default — energetic female)
+  - `tamil_female_happy`, `kannada_female_happy` (female)
+  - `marathi_female_wiki` (calm female), `marathi_male_wiki` (male)
+- **Fallback chain** (koi bhi step fail ho to agla automatic):
+  1. `ai4bharat/IndicF5` (official HF space)
+  2. do running mirrors (code me `INDICF5_SPACES` list)
+  3. `ai4bharat/indic-parler-tts` (Aman voice)
+  4. edge-tts (Madhur voice, koi API nahi)
+- `HF_TOKEN` secret laga hona chahiye — rate-limit kam rehti hai.
+
+## Caption patti (English caption cover)
+
+Source video me jo English text hota hai use `editor.py` ek **white patti**
+se cover karta hai aur usi patti pe **Hinglish caption** dikhta hai — wahi
+jo TTS bol rahi hai, time-synced chunks me (har chunk audio ke hisaab se).
+
+`config.yaml` me adjust kar sakte ho:
+
+```yaml
+caption_band:
+  enabled: true
+  y: 0.30        # patti kahan se shuru ho (video band ka fraction)
+  height: 0.40   # kitni unchi ho
+  color: "white" # patti ka color
+  font_size: 64  # Hinglish text ka size
+  words_per_line: 4
+```
+
+## Effects aur color grade (config.yaml me)
+
+| Setting      | Kya karta hai                                  |
+|--------------|-----------------------------------------------|
+| `zoom_amount`| zoom/pan ki strength (0.28 = clearly visible)  |
+| `saturation` | color vibrancy (1.28 default)                  |
+| `contrast`   | punchy blacks (1.12 default)                   |
+| `brightness` | thoda bright (0.04 default)                    |
+| `sharpen`    | sharpness / crisp look (1.0 default)           |
+| `video_speed`| video thodi tez (1.12 default)                 |
+| `bgm_volume` | slow background music volume (0.10 default)   |
+
+Effects: `zoom_in`, `zoom_out`, `pan_up`, `pan_down`, `ken_burns` — har
+video pe randomly ek. Background music **slow ambient pad** hai (Am-F-C-G
+chords) jo ffmpeg se synthesize hota hai — 100% copyright-free.
 
 ## Download me "Sign in to confirm you're not a bot" aa jaye to
 
@@ -88,18 +130,6 @@ Code me backup hai (tv/ios/mweb clients try karta hai). Phir bhi aaye to:
 1. Apne browser me YouTube login karke [cookies.txt export](https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp) karo
 2. Repo -> Settings -> Secrets -> Actions -> naya secret `YOUTUBE_COOKIES`
    me us file ka poora content paste kar do. Bas, ab download hamesha chalega.
-
-## Effects (config.yaml me)
-
-| Variant     | Kya karta hai                              |
-|-------------|--------------------------------------------|
-| `zoom_in`   | dheere dheere zoom in (1.00 -> 1.12)       |
-| `zoom_out`  | dheere dheere zoom out (1.12 -> 1.00)      |
-| `pan_up`    | halka zoom + camera neeche se upar         |
-| `pan_down`  | halka zoom + camera upar se neeche         |
-| `ken_burns` | zoom in + left-to-right pan                |
-
-Har video pe randomly ek laga hai; saturation/contrast bhi configurable hai.
 
 ## Purana topic-bot (backup)
 
