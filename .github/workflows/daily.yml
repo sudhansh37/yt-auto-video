@@ -64,6 +64,7 @@ jobs:
           YT_REFRESH_TOKEN:    ${{ secrets.YT_REFRESH_TOKEN }}
           YOUTUBE_COOKIES:     ${{ secrets.YOUTUBE_COOKIES }}
           HF_TOKEN:            ${{ secrets.HF_TOKEN }}
+          ttsfree:             ${{ secrets.ttsfree }}
           VOICE: hi-IN-MadhurNeural
         run: python src/main.py "${{ github.event.inputs.mode || 'mix' }}"
 

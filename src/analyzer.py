@@ -2,11 +2,8 @@
 Gemini video analysis -> Hindi narration script + title + description.
 
 Video Gemini Files API se upload hoti hai, phir model se JSON response
-manga jata hai: {"title", "caption", "description", "script", "hinglish_script"}
- - script         : Devanagari Hindi, video ki duration se match (TTS bolti hai)
- - hinglish_script: wahi script Roman/Latin (Hinglish) me - video ke caption
-                    patti pe time-synced dikhta hai
- - caption        : Hinglish hook line (top white band pe)
+manga jata hai: {"title", "description", "script"}
+ - script   : Devanagari Hindi, video ki duration se match (TTS bolti hai)
 
 CRASH FIX: Gemini kabhi kabhi 503 "high demand" deta hai (temporary).
 Isliye ab:
@@ -34,16 +31,13 @@ Rules:
 - Pehle 2 second me ek strong attention-grabbing hook line.
 - End me ek soft CTA (jaise "aisi hi videos ke liye follow karo").
 - IMPORTANT: script ek hi continuous flow me likho - koi ellipses (...),
-  dashes (-, --), pause markers ya line breaks NAHI. Chhoti tight sentences
-  jo bina gap ke ek saans me boli ja sakein. Voice-over robotic na lage.
+  dashes (-, --), ya line breaks NAHI. Chhoti natural sentences.
 
 Return ONLY a JSON object with exactly these keys:
 {{
   "title": "catchy Hindi title (Devanagari), max 90 characters",
-  "caption": "Hinglish hook line (Roman/Latin script only, NO Devanagari) - max 5 words, short and punchy, ye video ke top pe bade text me dikhega",
   "description": "2-3 line Hindi description (Devanagari) + neeche 8-10 hashtags mix karo: #shorts #facts #viral #hindifacts #amazingfacts ke saath video ke topic ke 4-5 specific hashtags",
-  "script": "poora Hindi narration script, Devanagari me",
-  "hinglish_script": "EXACTLY the same narration script transliterated to Hinglish (Roman/Latin script only, NO Devanagari, NO extra words) - word-for-word same content, ye video ke caption patti pe dikhega"
+  "script": "poora Hindi narration script, Devanagari me"
 }}
 """
 
@@ -97,12 +91,6 @@ def analyze_video(video_path, duration_s, gemini_cfg):
                 )
                 analysis = json.loads(resp.text)
                 _validate(analysis)
-                if "hinglish_script" not in analysis or not str(
-                    analysis["hinglish_script"]
-                ).strip():
-                    # non-fatal: editor title pe fallback karega
-                    print("  WARNING: 'hinglish_script' nahi mila - "
-                          "caption patti pe title dikhega.")
                 if model != primary:
                     print(f"  (fallback model se aaya: {model})")
                 return analysis

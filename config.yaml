@@ -1,7 +1,7 @@
 # ================= Hindi Shorts Bot - main config =================
 # Secrets (repo me pehle se lage hain - Actions me):
 #   GEMINI_API_KEY, YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN,
-#   YOUTUBE_COOKIES, HF_TOKEN (IndicF5 space ke liye, optional par recommended)
+#   YOUTUBE_COOKIES, HF_TOKEN, ttsfree (TTSFree.com ka apikey)
 
 channel:
   # Source channel ke shorts ka page (saare shorts ki list yahan se milti hai)
@@ -17,33 +17,31 @@ gemini:
   # (analyzer.py me FALLBACK_MODELS dekho)
 
 # ---------------- TTS (Hindi voice) ----------------
-# provider: "indicf5"    -> AI4Bharat IndicF5 - FREE, near-human natural Hindi
-#                          (HuggingFace space). Fail hone pe khud fallback
-#                          chain chalti hai: IndicF5 spaces -> Parler -> edge-tts
-# provider: "edge_tts"   -> Microsoft Edge TTS (free) - Madhur voice
+# provider: "ttsfree"    -> TTSFree.com ka API (secret 'ttsfree' me apikey).
+#                          Fail hone pe fallback chain: IndicF5 -> Parler
+#                          -> edge-tts (video kabhi fail nahi hoti)
+# provider: "indicf5"    -> AI4Bharat IndicF5 (HF space, free)
+# provider: "edge_tts"   -> Microsoft Edge TTS (free, no key)
 # provider: "custom_http"-> apna koi bhi TTS API (template niche)
 tts:
-  provider: "indicf5"
+  provider: "ttsfree"
 
-  indicf5:
-    # spaces ki automatic chain hoti hai (official + mirrors) - kuch nahi bharna
-    # Voice options (sab AI4Bharat ke official prompts, sab Hindi bolti hain):
-    #   punjabi_female_happy  - energetic female (default, best for shorts)
-    #   tamil_female_happy    - female, thodi soft
-    #   marathi_female_wiki   - calm female narration style
-    #   marathi_male_wiki     - male voice
-    #   kannada_female_happy  - female
+  ttsfree:
+    voice_service: "servicebin"   # "servicebin" ya "servicegoo"
+    voice_id: "hi-IN"             # hi-IN = Madhur (male), hi-IN2 = Swara (female)
+    voice_speed: "5"              # -100 se 100 (thoda tez = natural feel)
+    voice_pitch: "0"              # -100 se 100
+
+  indicf5:                        # FALLBACK 1 (free)
+    # Voices: punjabi_female_happy (default), tamil_female_happy,
+    # marathi_female_wiki, marathi_male_wiki, kannada_female_happy
     voice: "punjabi_female_happy"
 
-  # FALLBACK (agar IndicF5 spaces busy/fail ho to ye use hota hai)
-  edge_tts:
+  edge_tts:                        # LAST FALLBACK
     voice: "hi-IN-MadhurNeural"   # options: hi-IN-MadhurNeural, hi-IN-SwaraNeural, hi-IN-HemaNeural
-    rate: "+12%"                  # thodi tez bhasha = kam robotic feel
+    rate: "+12%"
 
   # APNA TTS API lagana ho to provider: "custom_http" karke yahan bharo:
-  #   {text}          -> script yahan aa jayegi
-  #   {{TTS_API_KEY}} -> secret "TTS_API_KEY" ki value
-  #   response: "binary" ya "base64_json:audios.0"
   custom_http:
     method: "POST"
     endpoint: "https://your-tts-api.example.com/v1/tts"
@@ -64,7 +62,7 @@ effects:
   variants: [zoom_in, zoom_out, pan_up, pan_down, ken_burns]
   # Zoom/pan kitna strong ho (0.15 = halka, 0.28 = clearly visible, 0.40 = bahut zyada)
   zoom_amount: 0.28
-  # Color grade - ab zyada visible
+  # Color grade
   saturation: 1.28     # vibrant colors
   contrast: 1.12       # punchy blacks
   brightness: 0.04     # thoda bright (0 = normal, 0.10 = kaafi bright)
@@ -74,17 +72,10 @@ effects:
   # preset: "medium"    # (optional) low-memory machine pe "ultrafast" + threads: 1
   # threads: 1          # GitHub Actions ke liye kuch nahi badalna
 
-  # ENGLISH CAPTION COVER - source video ke upar white patti.
-  # 'y' aur 'height' video band (1080x1440) ke fraction me hain.
-  # Zack D. Films ka English caption center me hota hai, isliye default
-  # patti 30% se 70% area cover karti hai. Apni marzi se adjust karo.
-  caption_band:
-    enabled: true
-    y: 0.30             # patti kahan se shuru ho (0 = band ka top)
-    height: 0.40        # patti ki height (band ka fraction)
-    color: "white"       # patti ka color (white / black / gray)
-    font_size: 64        # Hinglish text ka size
-    words_per_line: 4    # ek time pe kitne words dikhen
+# NOTE: crop TOP se anchor hota hai (upar ka content safe, bottom ka hissa
+# jahan English caption hota hai wo kat jata hai). Video band 3:4 (1080x1440)
+# rehta hai, upar-neeche white canvas - Instagram-style look. Koi text/caption
+# add NAHI hota.
 
 # ---------------- YouTube upload ----------------
 youtube:
