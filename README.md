@@ -1,13 +1,13 @@
 # Hindi Shorts Bot (Zack D. Films -> Hindi YouTube Shorts)
 
-Automated pipeline: **Zack D. Films ki shorts -> Gemini analysis -> IndicF5 Hindi
-voice -> 9:16 edit (English caption cover + Hinglish caption + effects + slow
-music) -> YouTube Shorts scheduled upload (din me 4 baar)**. Sab kuch GitHub
-Actions pe chalta hai.
+Automated pipeline: **Zack D. Films ki shorts -> Gemini analysis -> TTSFree
+Hindi voice -> 9:16 edit (bottom-crop + effects + slow music) -> YouTube
+Shorts scheduled upload (din me 4 baar)**. Sab kuch GitHub Actions pe chalta hai.
 
 > Note: ye repo pehle se lage secrets use karta hai — `GEMINI_API_KEY`,
 > `YT_CLIENT_ID`, `YT_CLIENT_SECRET`, `YT_REFRESH_TOKEN`, `HF_TOKEN`.
-> Koi nayi key lagane ki zaroorat nahi hai.
+> TTS voice ke liye **`ttsfree`** secret me TTSFree.com ka apikey daalo
+> (ttsfree.com -> Profile -> API Key).
 
 ```
 channel se short pick (duplicate check)      [src/downloader.py + src/history.py]
@@ -17,24 +17,25 @@ yt-dlp se download
         |
         v
 Gemini se video analysis -> Hindi script    [src/analyzer.py]
-+ Hinglish script + title + description
++ title + description
 + 503 "high demand" aaye to retry + fallback models
         |
         v
-IndicF5 se near-human Hindi voice           [src/tts.py]
-(AI4Bharat official space -> mirrors -> Parler -> edge-tts fallback chain)
-(original audio hata diya jata hai)
+TTSFree API se natural Hindi voice           [src/tts.py]
+(fallback chain: IndicF5 -> Parler -> edge-tts)
+(original audio hata diya jata hai, koi gap nahi)
         |
         v
 ffmpeg edit:                                [src/editor.py]
   - 1080x1920 (9:16 Shorts/Reels format)
-  - upar-neeche WHITE background
-  - English caption pe WHITE PATTI + uspe time-synced Hinglish caption
-    (jo TTS bol raha hai wahi screen pe dikhta hai)
+  - CROP TOP-se anchor: upar ka content safe, BOTTOM ka hissa
+    (English caption wahan hota hai) kat jata hai
+  - video band 3:4 (1080x1440) + upar-neeche WHITE canvas
   - strong zoom in / zoom out / pan / ken burns (zoom_amount: 0.28)
   - color grade: saturation + contrast + brightness
   - sharpness filter (unsharp)
   - slow lo-fi background music (ffmpeg synth - copyright free)
+  - KOI CAPTION / TEXT / PATTI NAHI - bilkul clean video
         |
         v
 YouTube pe Short upload                     [src/uploader.py]
@@ -52,11 +53,11 @@ Default: **din me 4 videos, subah 8 se shaam 5 ke beech** —
 08:15 AM, 11:00 AM, 01:45 PM, 04:30 PM IST.
 
 | Aapka IST time | cron (UTC)     |
-|----------------|-----------------|
-| 08:15 AM       | `"45 2 * * *"`  |
-| 11:00 AM       | `"30 5 * * *"`  |
-| 01:45 PM       | `"15 8 * * *"`  |
-| 04:30 PM       | `"0 11 * * *"`  |
+|----------------|----------------|
+| 08:15 AM       | `"45 2 * * *"` |
+| 11:00 AM       | `"30 5 * * *"` |
+| 01:45 PM       | `"15 8 * * *"` |
+| 04:30 PM       | `"0 11 * * *"` |
 
 ## Manual run (pehli baar test)
 
@@ -75,38 +76,21 @@ rakh lo — output pasand aaye tab `public` kar dena.
 Duplicate kabhi nahi hota: `data/history.json` track karta hai, har run ke
 baad GitHub pe commit hota hai. `max_history: 300` full hone pe reset.
 
-## TTS / voice (IndicF5)
+## TTS / voice (TTSFree API)
 
-- Default: **AI4Bharat IndicF5** — near-human natural Hindi. Voice-clone
-  model hai, isliye AI4Bharat ke official prompt audios use hote hain.
-- Voice change karni ho to `config.yaml` me `tts.indicf5.voice`:
-  - `punjabi_female_happy` (default — energetic female)
-  - `tamil_female_happy`, `kannada_female_happy` (female)
-  - `marathi_female_wiki` (calm female), `marathi_male_wiki` (male)
+- Primary: **TTSFree.com ka API** — repo secret **`ttsfree`** me apikey
+  daalo (ttsfree.com -> Profile -> API Key).
+- Voice settings `config.yaml` me (`tts.ttsfree`):
+  - `voice_id`: `hi-IN` = Madhur (male), `hi-IN2` = Swara (female)
+  - `voice_service`: `servicebin` ya `servicegoo`
+  - `voice_speed` / `voice_pitch`: -100 se 100
+- **No-gap**: script me se ellipses/dashes/line-breaks hata ke natural
+  sentences banaye jaate hain — voice ke beech koi lamba gap nahi.
 - **Fallback chain** (koi bhi step fail ho to agla automatic):
-  1. `ai4bharat/IndicF5` (official HF space)
-  2. do running mirrors (code me `INDICF5_SPACES` list)
+  1. TTSFree API
+  2. AI4Bharat IndicF5 (free HF space)
   3. `ai4bharat/indic-parler-tts` (Aman voice)
   4. edge-tts (Madhur voice, koi API nahi)
-- `HF_TOKEN` secret laga hona chahiye — rate-limit kam rehti hai.
-
-## Caption patti (English caption cover)
-
-Source video me jo English text hota hai use `editor.py` ek **white patti**
-se cover karta hai aur usi patti pe **Hinglish caption** dikhta hai — wahi
-jo TTS bol rahi hai, time-synced chunks me (har chunk audio ke hisaab se).
-
-`config.yaml` me adjust kar sakte ho:
-
-```yaml
-caption_band:
-  enabled: true
-  y: 0.30        # patti kahan se shuru ho (video band ka fraction)
-  height: 0.40   # kitni unchi ho
-  color: "white" # patti ka color
-  font_size: 64  # Hinglish text ka size
-  words_per_line: 4
-```
 
 ## Effects aur color grade (config.yaml me)
 
@@ -123,6 +107,15 @@ caption_band:
 Effects: `zoom_in`, `zoom_out`, `pan_up`, `pan_down`, `ken_burns` — har
 video pe randomly ek. Background music **slow ambient pad** hai (Am-F-C-G
 chords) jo ffmpeg se synthesize hota hai — 100% copyright-free.
+
+## Crop ka logic
+
+Source video (9:16) ko 3:4 band (1080x1440) me crop karte waqt **top se
+anchor** kiya jata hai — yaani **upar ka content bilkul safe rehta hai**
+aur **bottom ka hissa crop hota hai** (Zack D. Films ka English caption
+bottom pe hota hai, wo apne aap kat jata hai). Upar-neeche white canvas
+lagakar final 1080x1920 Short banta hai (Instagram-style look). Video me
+koi text/caption overlay nahi hota.
 
 ## Download me "Sign in to confirm you're not a bot" aa jaye to
 
