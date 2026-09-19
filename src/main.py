@@ -4,9 +4,10 @@ Hindi Shorts Bot - main pipeline
 1. Source channel se ek short pick karo (latest / random / mix) - duplicates skip
 2. yt-dlp se download karo (full HD vertical)
 3. Gemini se video analysis -> Hindi script + Hinglish caption + title + description
-4. TTS se Hindi voice banao (original audio hata diya jata hai)
-5. ffmpeg: 9:16 crop + white canvas + Hinglish caption + zoom/pan effect
-   + color filter + speed boost + background beat
+4. IndicF5 se Hindi voice banao (original audio hata diya jata hai)
+5. ffmpeg: 9:16 crop + white canvas + English caption ko white patti se cover
+   + us patti pe time-synced Hinglish text + zoom/pan effect + color grade
+   + sharpness + slow background music
 6. YouTube Data API se Short upload karo
 7. history.json me video id save karo (isliye kabhi duplicate nahi)
 
@@ -87,15 +88,19 @@ def main():
     print(f"  Title: {analysis['title']}")
     print(f"  Caption: {analysis.get('caption', '')}")
 
-    # ---- 4. TTS (Hindi voice, no-gap cleanup ke saath) ----
+    # ---- 4. TTS (IndicF5 Hindi voice, no-gap cleanup ke saath) ----
+    print("Hindi voice generate ho rahi hai (IndicF5)...")
     audio = synthesize(analysis["script"], cfg["tts"], work / "voice.mp3")
     print(f"Hindi voice ready: {audio.name}")
 
-    # ---- 5. edit: 9:16 crop + white bg + caption + effect + speed ----
+    # ---- 5. edit: patti + Hinglish captions + effects + music ----
     variant = random.choice(cfg["effects"]["variants"])
+    # patti pe Hinglish text; na mile to title fallback
+    hinglish = analysis.get("hinglish_script") or analysis.get("caption") or analysis["title"]
     out = edit_video(
         src, audio, work / "final.mp4", variant, cfg["effects"],
         caption=analysis.get("caption"),
+        hinglish=hinglish,
     )
     print(f"Edit complete (effect={variant}) -> {out.name}")
 

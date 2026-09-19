@@ -1,8 +1,10 @@
 # Hindi Shorts Bot - scheduled publisher (Zack D. Films -> Hindi Shorts)
 #
-# Din me 2 baar publish:
-#   10:00 AM IST = 04:30 UTC
-#   06:00 PM IST = 12:30 UTC
+# Din me 4 baar publish (subah 8 baje se shaam 5 baje ke beech):
+#   08:15 AM IST = 02:45 UTC
+#   11:00 AM IST = 05:30 UTC
+#   01:45 PM IST = 08:15 UTC
+#   04:30 PM IST = 11:00 UTC
 # TIME CHANGE KARNA HO TO niche cron lines edit karo (UTC me hota hai,
 # IST se 5 ghante 30 minute peeche).
 
@@ -10,8 +12,10 @@ name: publish-short
 
 on:
   schedule:
-    - cron: "30 4 * * *"     # 10:00 AM IST
-    - cron: "30 12 * * *"    # 06:00 PM IST
+    - cron: "45 2 * * *"     # 08:15 AM IST
+    - cron: "30 5 * * *"     # 11:00 AM IST
+    - cron: "15 8 * * *"     # 01:45 PM IST
+    - cron: "0 11 * * *"     # 04:30 PM IST
   workflow_dispatch:          # repo -> Actions -> manual "Run workflow" button bhi
     inputs:
       mode:
@@ -31,7 +35,7 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 

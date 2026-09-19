@@ -1,9 +1,17 @@
-"""Gemini video analysis -> Hindi narration script + title + description.
+"""
+Gemini video analysis -> Hindi narration script + title + description.
 
 Video Gemini Files API se upload hoti hai, phir model se JSON response
-manga jata hai: {"title", "caption", "description", "script"}
- - script   : Devanagari Hindi, video ki duration se match
- - caption  : Hinglish (Roman script) on-screen hook line
+manga jata hai: {"title", "caption", "description", "script", "hinglish_script"}
+ - script         : Devanagari Hindi, video ki duration se match (TTS bolti hai)
+ - hinglish_script: wahi script Roman/Latin (Hinglish) me - video ke caption
+                    patti pe time-synced dikhta hai
+ - caption        : Hinglish hook line (top white band pe)
+
+CRASH FIX: Gemini kabhi kabhi 503 "high demand" deta hai (temporary).
+Isliye ab:
+  - har model ke liye 3 attempts (beech me wait)
+  - fail hone pe fallback models ki chain try hoti hai
 """
 import json
 import os
@@ -34,9 +42,24 @@ Return ONLY a JSON object with exactly these keys:
   "title": "catchy Hindi title (Devanagari), max 90 characters",
   "caption": "Hinglish hook line (Roman/Latin script only, NO Devanagari) - max 5 words, short and punchy, ye video ke top pe bade text me dikhega",
   "description": "2-3 line Hindi description (Devanagari) + neeche 8-10 hashtags mix karo: #shorts #facts #viral #hindifacts #amazingfacts ke saath video ke topic ke 4-5 specific hashtags",
-  "script": "poora Hindi narration script, Devanagari me"
+  "script": "poora Hindi narration script, Devanagari me",
+  "hinglish_script": "EXACTLY the same narration script transliterated to Hinglish (Roman/Latin script only, NO Devanagari, NO extra words) - word-for-word same content, ye video ke caption patti pe dikhega"
 }}
 """
+
+# 503 "high demand" fail hone pe ye fallback models try hote hain
+FALLBACK_MODELS = [
+    "gemini-3.6-flash",
+    "gemini-flash-latest",
+    "gemini-3.5-flash",
+    "gemini-2.5-flash",
+]
+
+
+def _validate(analysis):
+    for key in ("title", "description", "script"):
+        if key not in analysis or not str(analysis[key]).strip():
+            raise ValueError(f"Gemini response me '{key}' missing/khali hai.")
 
 
 def analyze_video(video_path, duration_s, gemini_cfg):
@@ -55,17 +78,42 @@ def analyze_video(video_path, duration_s, gemini_cfg):
     if f.state.name != "ACTIVE":
         raise RuntimeError(f"Gemini file state unexpected: {f.state.name}")
 
-    model = gemini_cfg.get("model", "gemini-3.6-flash")
     prompt = PROMPT.format(duration=int(duration_s), words=int(duration_s * 2.5))
 
-    resp = client.models.generate_content(
-        model=model,
-        contents=[prompt, f],
-        config=types.GenerateContentConfig(response_mime_type="application/json"),
-    )
+    # primary model pehle, phir fallbacks (duplicate hata ke)
+    primary = gemini_cfg.get("model", "gemini-3.6-flash")
+    models = [primary] + [m for m in FALLBACK_MODELS if m != primary]
 
-    analysis = json.loads(resp.text)
-    for key in ("title", "description", "script"):
-        if key not in analysis or not analysis[key].strip():
-            raise RuntimeError(f"Gemini response me '{key}' missing/khali hai.")
-    return analysis
+    last_err = None
+    for model in models:
+        for attempt in range(1, 4):   # har model ke 3 attempts
+            try:
+                resp = client.models.generate_content(
+                    model=model,
+                    contents=[prompt, f],
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json"
+                    ),
+                )
+                analysis = json.loads(resp.text)
+                _validate(analysis)
+                if "hinglish_script" not in analysis or not str(
+                    analysis["hinglish_script"]
+                ).strip():
+                    # non-fatal: editor title pe fallback karega
+                    print("  WARNING: 'hinglish_script' nahi mila - "
+                          "caption patti pe title dikhega.")
+                if model != primary:
+                    print(f"  (fallback model se aaya: {model})")
+                return analysis
+            except Exception as e:  # noqa: BLE001 - retry chain
+                last_err = e
+                wait = 15 * attempt
+                print(f"  WARNING: Gemini {model} attempt {attempt}/3 fail: {e}")
+                print(f"           {wait}s wait karke retry...")
+                time.sleep(wait)
+        print(f"  {model} bhi fail - agla fallback model try karte hain...")
+
+    raise RuntimeError(
+        f"Gemini analysis fail hua (sab models/moves try ho gaye): {last_err}"
+    )

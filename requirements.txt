@@ -4,6 +4,7 @@ PyYAML
 google-genai
 edge-tts
 gradio_client
+numpy
 mutagen
 Pillow
 imageio-ffmpeg

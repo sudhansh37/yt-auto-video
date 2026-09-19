@@ -1,7 +1,7 @@
 # ================= Hindi Shorts Bot - main config =================
 # Secrets (repo me pehle se lage hain - Actions me):
 #   GEMINI_API_KEY, YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN,
-#   YOUTUBE_COOKIES, HF_TOKEN (parler TTS ke liye)
+#   YOUTUBE_COOKIES, HF_TOKEN (IndicF5 space ke liye, optional par recommended)
 
 channel:
   # Source channel ke shorts ka page (saare shorts ki list yahan se milti hai)
@@ -11,24 +11,31 @@ channel:
 
 # ---------------- Gemini (video analysis -> Hindi script) ----------------
 gemini:
-  model: "gemini-3.6-flash"       # chaho to "gemini-3.6-pro"
+  model: "gemini-3.6-flash"       # primary model
+  # 503 "high demand" aaye to ye fallback models automatic try hote hain:
+  #   gemini-flash-latest, gemini-3.5-flash, gemini-2.5-flash
+  # (analyzer.py me FALLBACK_MODELS dekho)
 
 # ---------------- TTS (Hindi voice) ----------------
-# provider: "parler"    -> AI4Bharat Indic Parler-TTS - FREE, natural "Aman"
-#                          voice (HuggingFace space, koi API key nahi).
-#                          Fail hone pe khud edge-tts pe fallback ho jata hai.
-# provider: "edge_tts"  -> Microsoft Edge TTS (free) - Madhur voice
+# provider: "indicf5"    -> AI4Bharat IndicF5 - FREE, near-human natural Hindi
+#                          (HuggingFace space). Fail hone pe khud fallback
+#                          chain chalti hai: IndicF5 spaces -> Parler -> edge-tts
+# provider: "edge_tts"   -> Microsoft Edge TTS (free) - Madhur voice
 # provider: "custom_http"-> apna koi bhi TTS API (template niche)
 tts:
-  provider: "parler"
+  provider: "indicf5"
 
-  parler:
-    space: "ai4bharat/indic-parler-tts"
-    # Voice description me hi speaker ka naam jaata hai.
-    # Hindi voices: Aman, Rohit (male) / Divya, Rani (female)
-    voice_desc: "Aman speaks in an expressive and energetic tone, at a slightly fast pace, in a very clear recording with no background noise."
+  indicf5:
+    # spaces ki automatic chain hoti hai (official + mirrors) - kuch nahi bharna
+    # Voice options (sab AI4Bharat ke official prompts, sab Hindi bolti hain):
+    #   punjabi_female_happy  - energetic female (default, best for shorts)
+    #   tamil_female_happy    - female, thodi soft
+    #   marathi_female_wiki   - calm female narration style
+    #   marathi_male_wiki     - male voice
+    #   kannada_female_happy  - female
+    voice: "punjabi_female_happy"
 
-  # FALLBACK (agar parler space busy/fail ho to ye use hota hai)
+  # FALLBACK (agar IndicF5 spaces busy/fail ho to ye use hota hai)
   edge_tts:
     voice: "hi-IN-MadhurNeural"   # options: hi-IN-MadhurNeural, hi-IN-SwaraNeural, hi-IN-HemaNeural
     rate: "+12%"                  # thodi tez bhasha = kam robotic feel
@@ -55,15 +62,32 @@ tts:
 # ---------------- Video editing ----------------
 effects:
   variants: [zoom_in, zoom_out, pan_up, pan_down, ken_burns]
-  saturation: 1.15      # color filter - thoda vibrant
-  contrast: 1.08        # color filter - thoda punchy
-  video_speed: 1.15     # video thodi tez (1.0 = normal, 1.3 = bahut tez)
-  bgm_volume: 0.18      # background beat volume (0 = beat band, 0.25 = zyada)
+  # Zoom/pan kitna strong ho (0.15 = halka, 0.28 = clearly visible, 0.40 = bahut zyada)
+  zoom_amount: 0.28
+  # Color grade - ab zyada visible
+  saturation: 1.28     # vibrant colors
+  contrast: 1.12       # punchy blacks
+  brightness: 0.04     # thoda bright (0 = normal, 0.10 = kaafi bright)
+  sharpen: 1.0         # sharpness / crisp look (0 = band, 1.5 = bahut sharp)
+  video_speed: 1.12    # video thodi tez (1.0 = normal, 1.3 = bahut tez)
+  bgm_volume: 0.10     # slow background music volume (0 = band, 0.20 = zyada)
   # preset: "medium"    # (optional) low-memory machine pe "ultrafast" + threads: 1
   # threads: 1          # GitHub Actions ke liye kuch nahi badalna
 
+  # ENGLISH CAPTION COVER - source video ke upar white patti.
+  # 'y' aur 'height' video band (1080x1440) ke fraction me hain.
+  # Zack D. Films ka English caption center me hota hai, isliye default
+  # patti 30% se 70% area cover karti hai. Apni marzi se adjust karo.
+  caption_band:
+    enabled: true
+    y: 0.30             # patti kahan se shuru ho (0 = band ka top)
+    height: 0.40        # patti ki height (band ka fraction)
+    color: "white"       # patti ka color (white / black / gray)
+    font_size: 64        # Hinglish text ka size
+    words_per_line: 4    # ek time pe kitne words dikhen
+
 # ---------------- YouTube upload ----------------
 youtube:
-  privacy: "public"     # public / unlisted / private
-  category_id: "27"     # 27 = Education
+  privacy: "public"      # public / unlisted / private
+  category_id: "27"      # 27 = Education
   tags: ["hindi facts", "shorts", "facts in hindi", "amazing facts", "viral facts"]
