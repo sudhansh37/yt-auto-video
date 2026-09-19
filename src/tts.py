@@ -1,25 +1,24 @@
-"""TTS module - Hindi voice banata hai.
+"""
+TTS module - Hindi voice banata hai.
 
 Providers (config.yaml me choose karo):
-  - "parler"    : AI4Bharat Indic Parler-TTS (HuggingFace Space) - FREE,
-                  natural/native Hindi voices (Aman, Rohit, Divya, Rani).
-                  Agar space busy/fail ho to automatically edge-tts fallback.
-  - "edge_tts"  : Microsoft Edge TTS (free, no key) - Madhur voice
+  - "indicf5"    : AI4Bharat IndicF5 (HuggingFace Space) - FREE, near-human
+                   natural Hindi. Voice-clone based: ek reference audio + uska
+                   transcript chahiye. Fail hone pe Parler -> edge-tts fallback.
+  - "edge_tts"   : Microsoft Edge TTS (free, no key) - Madhur voice
   - "custom_http": apna koi bhi TTS API (template config.yaml me)
-  - "sarvam"    : Sarvam AI TTS example
+  - "sarvam"     : Sarvam AI TTS example
 
 NO-GAP FIX (robotic voice / spaces ka ilaaj):
-  Voice ke beech spaces isliye aate hain:
-    1. Text me ellipses (...), dashes, extra commas, line breaks hote hain
-    2. Sentence-end (purna viram "," / ".") pe TTS lambi pause leta hai
-  clean_for_speech() in sab ko fix karta hai:
-    - faltu pause cheezein hata deta hai
-    - sentence-enders ko comma me badal deta hai (pause chhoti ho jati hai)
+  clean_for_speech() text se faltu pause banane wali cheezein hata deta hai
+  (ellipses, dashes, extra commas, line breaks, sentence-end ki lambi pause).
 """
 import asyncio
 import copy
 import os
 import re
+import shutil
+import subprocess
 from pathlib import Path
 
 import requests
@@ -27,26 +26,36 @@ import requests
 
 def clean_for_speech(text):
     """TTS text se faltu pause banane wali cheezein hata do."""
-    # ellipses (..., …) -> single full stop (ye TTS me sabse lambi pause banata hai)
+    # ellipses (..., ...) -> single full stop (ye TTS me sabse lambi pause banata hai)
     text = re.sub(r"\.{2,}", ".", text)
-    text = text.replace("…", ".")
-    # dashes (-, –, —) jo beech me pause banate hain
-    text = re.sub(r"\s*[-–—]\s*", " ", text)
+    text = text.replace("\u2026", ".")
+    # dashes (-, \u2013, \u2014) jo beech me pause banate hain
+    text = re.sub(r"\s*[-\u2013\u2014]\s*", " ", text)
     # emojis hatao (kuch TTS engines inpe atak jaate hain)
-    text = re.sub(r"[\U0001F300-\U0001FAFF\u2600-\u27BF\uFE0F]", "", text)
+    text = re.sub("[\U0001F300-\U0001FAFF\u2600-\u27BF\uFE0F]", "", text)
     # repeated punctuation -> single
-    text = re.sub(r"([!?।,])\1+", r"\1", text)
+    text = re.sub(r"([!?\u0964,])\1+", r"\1", text)
     # extra commas (har comma ek pause hota hai)
     text = re.sub(r",\s*,", ",", text)
     # newlines / multiple spaces -> single space (paragraph gap hata ke flow me)
     text = re.sub(r"\s+", " ", text)
-    # NO-GAP: sentence end (। aur .) ko comma bana do -
+    # NO-GAP: sentence end (purna viram) ko comma bana do -
     # isse lambi pause chhoti ho jati hai aur bol ek flow me chalta hai
-    text = text.replace("।", ",").replace(".", ",")
+    text = text.replace("\u0964", ",").replace(".", ",")
     # ab double commas/punctuation jama na ho
     text = re.sub(r",\s*,", ",", text)
     text = re.sub(r",\s*([!?])", r" \1", text)
     return text.strip(" ,").strip()
+
+
+def _ffmpeg_exe():
+    if shutil.which("ffmpeg"):
+        return "ffmpeg"
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        return "ffmpeg"
 
 
 def synthesize(text, tts_cfg, out_path):
@@ -57,15 +66,20 @@ def synthesize(text, tts_cfg, out_path):
     if not text:
         raise RuntimeError("TTS ke liye script khali hai!")
 
-    provider = tts_cfg.get("provider", "parler")
+    provider = tts_cfg.get("provider", "indicf5")
 
-    if provider == "parler":
+    if provider == "indicf5":
         try:
-            return _parler(text, tts_cfg.get("parler", {}), out_path)
+            return _indicf5(text, tts_cfg.get("indicf5", {}), out_path)
         except Exception as e:  # noqa: BLE001
-            print(f"WARNING: Parler TTS fail hua ({e})")
-            print("         edge-tts pe fallback kar raha hoon (Madhur voice)...")
-            return _edge_tts(text, tts_cfg.get("edge_tts", {}), out_path)
+            print(f"WARNING: IndicF5 fail hua ({e})")
+            print("         Parler-TTS pe fallback (natural 'Aman' voice)...")
+        try:
+            return _parler(text, {}, out_path)
+        except Exception as e:  # noqa: BLE001
+            print(f"WARNING: Parler TTS bhi fail hua ({e})")
+            print("         edge-tts pe fallback (Madhur voice)...")
+        return _edge_tts(text, tts_cfg.get("edge_tts", {}), out_path)
 
     if provider == "edge_tts":
         return _edge_tts(text, tts_cfg.get("edge_tts", {}), out_path)
@@ -76,13 +90,158 @@ def synthesize(text, tts_cfg, out_path):
     raise ValueError(f"Unknown TTS provider: {provider!r}")
 
 
-def _parler(text, cfg, out_path):
-    """AI4Bharat Indic Parler-TTS via HuggingFace Space (FREE, koi API key
-    zaroori nahi - natural 'Aman' jaisi Hindi voices).
+# ----------------------------------------------------------------------------
+# IndicF5 - AI4Bharat ka near-human polyglot TTS (HuggingFace Space, FREE)
+#
+# Voice-clone model hai: text + reference audio + uska transcript.
+# Model polyglot hai - kisi bhi bhasha ke reference se Hindi bol sakta hai.
+# Voices niche INDICF5_VOICES me hain (AI4Bharat ke official prompts).
+# ----------------------------------------------------------------------------
 
-    - Space pe queue lag sakti hai: 30-60 sec video ke liye 1-4 min lagta hai
+INDICF5_VOICES = {
+    # energetic female voice - Hindi synth ke liye space ka apna demo isi se
+    # hota hai, best default
+    "punjabi_female_happy": {
+        "url": "https://github.com/AI4Bharat/IndicF5/raw/refs/heads/main/prompts/PAN_F_HAPPY_00002.wav",
+        "ref_text": "\u0a07\u0a71\u0a15 \u0a17\u0a3c\u0a30\u0a3e\u0a39\u0a15 \u0a28\u0a47 \u0a38\u0a3e\u0a21\u0a40 \u0a2c\u0a47\u0a2e\u0a3f\u0a38\u0a3e\u0a32 \u0a38\u0a47\u0a35\u0a3e \u0a2c\u0a3e\u0a30\u0a47 \u0a26\u0a3f\u0a32\u0a4b\u0a02\u0a17\u0a35\u0a3e\u0a39\u0a40 \u0a26\u0a3f\u0a71\u0a24\u0a40 \u0a1c\u0a3f\u0a38 \u0a28\u0a3e\u0a32 \u0a38\u0a3e\u0a28\u0a42\u0a70 \u0a05\u0a28\u0a70\u0a26 \u0a2e\u0a39\u0a3f\u0a38\u0a42\u0a38 \u0a39\u0a4b\u0a07\u0a06\u0964",
+    },
+    # female, happy
+    "tamil_female_happy": {
+        "url": "https://github.com/AI4Bharat/IndicF5/raw/refs/heads/main/prompts/TAM_F_HAPPY_00001.wav",
+        "ref_text": "\u0ba8\u0bbe\u0ba9\u0bcd \u0ba8\u0bc6\u0ba9\u0b9a\u0bcd\u0b9a \u0bae\u0bbe\u0ba4\u0bbf\u0bb0\u0bbf\u0baf\u0bc7 \u0b85\u0bae\u0bc7\u0b9a\u0bbe\u0ba9\u0bcd\u0bb2 \u0baa\u0bc6\u0bb0\u0bbf\u0baf \u0ba4\u0bb3\u0bcd\u0bb3\u0bc1\u0baa\u0b9f\u0bbf \u0bb5\u0ba8\u0bcd\u0ba4\u0bbf\u0bb0\u0bc1\u0b95\u0bcd\u0b95\u0bc1. \u0b95\u0bae\u0bcd\u0bae\u0bbf \u0b95\u0bbe\u0b9a\u0bc1\u0b95\u0bcd\u0b95\u0bc7 \u0b85\u0ba8\u0bcd\u0ba4\u0baa\u0bcd \u0baa\u0bc1\u0ba4\u0bc1 \u0b9a\u0bc7\u0bae\u0bcd\u0b9a\u0b99\u0bcd \u0bae\u0bbe\u0b9f\u0ba9\u0bcd \u0bb5\u0bbe\u0b99\u0bcd\u0b95\u0bbf\u0b9f\u0bb2\u0bbe\u0bae\u0bcd.",
+    },
+    # female, calm (wiki-style narration)
+    "marathi_female_wiki": {
+        "url": "https://github.com/AI4Bharat/IndicF5/raw/refs/heads/main/prompts/MAR_F_WIKI_00001.wav",
+        "ref_text": "\u0926\u093f\u0917\u0902\u0924\u0930\u093e\u0935\u094d\u0926\u093e\u0930\u0947 \u0905\u0902\u0924\u0930\u0933 \u0915\u0915\u094d\u0937\u0947\u0924\u0932\u093e \u0915\u091a\u0930\u093e \u091a\u093f\u0928\u094d\u0939\u093f\u0924 \u0915\u0930\u0923\u094d\u092f\u093e\u0938\u093e\u0920\u0940 \u092a\u094d\u0930\u092f\u0924\u094d\u0928 \u0915\u0947\u0932\u0947 \u091c\u093e\u0924 \u0906\u0939\u0947.",
+    },
+    # male voice
+    "marathi_male_wiki": {
+        "url": "https://github.com/AI4Bharat/IndicF5/raw/refs/heads/main/prompts/MAR_M_WIKI_00001.wav",
+        "ref_text": "\u092f\u093e \u092a\u094d\u0930\u0925\u093e\u0932\u093e \u090f\u0915\u094b\u0923\u0940\u0938\u0936\u0947 \u092a\u0902\u091a\u093e\u0924\u0930 \u0908\u0938\u0935\u0940 \u092a\u093e\u0938\u0942\u0928 \u092d\u093e\u0930\u0924\u0940\u092f \u0926\u0902\u0921 \u0938\u0902\u0939\u093f\u0924\u093e\u091a\u0940 \u0927\u093e\u0930\u093e \u091a\u093e\u0930\u0936\u0947 \u0905\u0920\u094d\u0920\u093e\u0935\u0940\u0938 \u0906\u0923\u093f \u091a\u093e\u0930\u0936\u0947 \u090f\u0915\u094b\u0923\u0924\u0940\u0938\u091a\u094d\u092f\u093e \u0905\u0928\u094d\u0924\u0930\u094d\u0917\u0924 \u0928\u093f\u0937\u0947\u0927 \u0915\u0947\u0932\u093e.",
+    },
+    # female, happy
+    "kannada_female_happy": {
+        "url": "https://github.com/AI4Bharat/IndicF5/raw/refs/heads/main/prompts/KAN_F_HAPPY_00001.wav",
+        "ref_text": "\u0ca8\u0cae\u0ccd \u0cab\u0ccd\u0cb0\u0cbf\u0c9c\u0ccd\u0c9c\u0cb2\u0ccd\u0cb2\u0cbf \u0c95\u0cc2\u0cb2\u0cbf\u0c82\u0c97\u0ccd \u0cb8\u0cae\u0cb8\u0ccd\u0caf\u0cc6 \u0c86\u0c97\u0cbf \u0ca8\u0cbe\u0ca8\u0ccd \u0cad\u0cbe\u0cb3 \u0ca6\u0cbf\u0ca8\u0ca6\u0cbf\u0c82\u0ca6 \u0c92\u0ca6\u0ccd\u0ca6\u0cbe\u0ca1\u0ccd\u0ca4\u0cbf\u0ca6\u0ccd\u0ca6\u0cc6, \u0c86\u0ca6\u0ccd\u0cb0\u0cc6 \u0c85\u0ca6\u0ccd\u0ca8\u0cc0\u0c97 \u0cae\u0cc6\u0c95\u0cbe\u0ca8\u0cbf\u0c95\u0ccd \u0c86\u0c97\u0cbf\u0cb0\u0ccb \u0ca8\u0cbf\u0cae\u0ccd \u0cb8\u0cb9\u0cbe\u0caf\u0ccd\u0ca6\u0cbf\u0c82\u0ca6 \u0cac\u0c97\u0cc6\u0cb9\u0cb0\u0cbf\u0cb8\u0ccd\u0c95\u0ccb\u0cac\u0ccb\u0ca6\u0cc1 \u0c85\u0c82\u0ca4\u0cbe\u0c97\u0cbf \u0ca8\u0cbf\u0cb0\u0cbe\u0cb3 \u0c86\u0caf\u0ccd\u0ca4\u0cc1 \u0ca8\u0c82\u0c97\u0cc6.",
+    },
+}
+
+
+def _split_script(text, max_chars=240):
+    """Lambi script ko sentence boundaries pe chunks me todo."""
+    sentences = re.split(r"(?<=[.\u0964!?])\s+", text.strip())
+    chunks, cur = [], ""
+    for s in sentences:
+        if not s:
+            continue
+        if len(cur) + len(s) + 1 <= max_chars:
+            cur = f"{cur} {s}".strip()
+        else:
+            if cur:
+                chunks.append(cur)
+            cur = s
+    if cur:
+        chunks.append(cur)
+    return chunks or [text]
+
+
+# IndicF5 spaces ki chain - pehla fail ho to agla try hota hai
+# (official space kabhi kabhi maintenance/break ho jata hai,
+#  mirrors usi code ke copies hain)
+INDICF5_SPACES = [
+    "ai4bharat/IndicF5",
+    "YashMachineLearning/IndicF5-1",
+    "joshiyash666/IndicF5",
+]
+
+
+def _write_wav(path, sample_rate, audio_np):
+    """numpy audio ko WAV file me likho (mono, 16-bit PCM)."""
+    import wave
+
+    import numpy as np
+
+    audio = np.asarray(audio_np)
+    if audio.ndim > 1:
+        audio = audio.mean(axis=1)
+    if audio.dtype != np.int16:
+        audio = np.clip(audio.astype(np.float64), -1.0, 1.0)
+        audio = (audio * 32767).astype(np.int16)
+    with wave.open(str(path), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(int(sample_rate))
+        w.writeframes(audio.tobytes())
+
+
+def _indicf5(text, cfg, out_path):
+    """AI4Bharat IndicF5 via HuggingFace Space (FREE, near-human Hindi).
+
+    - Spaces ki chain try hoti hai (official -> mirrors)
+    - Space pe queue lag sakti hai (30-60s video ke liye ~1-3 min)
     - HF_TOKEN (agar set ho) se rate-limit better rehti hai
-    - Lambi script automatic chunks me generate hoti hai (space handle karta hai)
+    - Lambi script automatic sentence-level chunks me jaati hai
+    """
+    from gradio_client import Client
+
+    voice_name = cfg.get("voice", "punjabi_female_happy")
+    voice = INDICF5_VOICES.get(voice_name) or INDICF5_VOICES["punjabi_female_happy"]
+
+    # reference audio ek baar download karke cache kar lo
+    ref_path = out_path.parent / "indicf5_ref.wav"
+    if not ref_path.exists():
+        r = requests.get(voice["url"], timeout=120)
+        r.raise_for_status()
+        ref_path.write_bytes(r.content)
+
+    chunks = _split_script(text)
+
+    last_err = None
+    for space in [cfg.get("space")] + INDICF5_SPACES if cfg.get("space") else INDICF5_SPACES:
+        try:
+            client = Client(space, token=os.environ.get("HF_TOKEN") or None)
+
+            parts = []
+            for i, chunk in enumerate(chunks):
+                print(f"  [IndicF5:{space}] chunk {i + 1}/{len(chunks)} generate ho raha hai...")
+                result = client.predict(
+                    text=chunk,
+                    ref_audio=str(ref_path),
+                    ref_text=voice["ref_text"],
+                    api_name="/synthesize_speech",
+                )
+                sample_rate, audio = result[0], result[1]
+                part = out_path.parent / f"indicf5_part{i}.wav"
+                _write_wav(part, sample_rate, audio)
+                parts.append(part)
+
+            out_wav = out_path.with_suffix(".wav")
+            if len(parts) == 1:
+                shutil.copy(parts[0], out_wav)
+                return out_wav
+
+            # multiple chunks -> ffmpeg concat (same format, -c copy fast hai)
+            list_file = out_path.parent / "indicf5_parts.txt"
+            list_file.write_text(
+                "\n".join(f"file '{p.name}'" for p in parts), encoding="utf-8"
+            )
+            subprocess.run(
+                [_ffmpeg_exe(), "-y", "-f", "concat", "-safe", "0",
+                 "-i", str(list_file), "-c", "copy", str(out_wav)],
+                check=True, capture_output=True,
+            )
+            return out_wav
+        except Exception as e:  # noqa: BLE001 - agla space try karo
+            last_err = e
+            print(f"  WARNING: space '{space}' fail hua ({str(e)[:150]})")
+
+    raise RuntimeError(f"IndicF5 ke saare spaces fail ho gaye: {last_err}")
+
+
+def _parler(text, cfg, out_path):
+    """AI4Bharat Indic Parler-TTS via HuggingFace Space (FREE).
+    IndicF5 down hone par iska fallback hai - natural 'Aman' voice.
     """
     import shutil
 
