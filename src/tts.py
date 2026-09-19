@@ -100,7 +100,8 @@ def synthesize(text, tts_cfg, out_path):
     # fallback chain - jo provider config me hai wahi pehle try hota hai
     if provider == "gemini":
         chain = [
-            ("Gemini", lambda: _gemini_tts(text, tts_cfg.get("gemini", {}), out_path)),            ("TTSFree", lambda: _ttsfree(text, tts_cfg.get("ttsfree", {}), out_path)),
+            ("Gemini", lambda: _gemini_tts(text, tts_cfg.get("gemini", {}), out_path)),
+            ("TTSFree", lambda: _ttsfree(text, tts_cfg.get("ttsfree", {}), out_path)),
             ("IndicF5", lambda: _indicf5(text, tts_cfg.get("indicf5", {}), out_path)),
             ("Parler", lambda: _parler(text, {}, out_path)),
             ("edge-tts", lambda: _edge_tts(text, tts_cfg.get("edge_tts", {}), out_path)),
@@ -132,14 +133,14 @@ def synthesize(text, tts_cfg, out_path):
     for name, fn in chain:
         try:
             return fn()
-        except Exception as e:  # noqa: BLE001 - alla fallback
+        except Exception as e:  # noqa: BLE001 - agla fallback
             last_err = e
             print(f"WARNING: {name} TTS fail hua ({str(e)[:200]})")
             print(f"         agla fallback try kar rahe hain...")
     raise RuntimeError(f"Saare TTS providers fail ho gaye: {last_err}")
 
 
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 # Gemini TTS - Google ka native speech model (GEMINI_API_KEY se, naya key nahi)
 #
 # Model se 24kHz 16-bit mono PCM aata hai (WAV me wrap karte hain).
@@ -246,144 +247,300 @@ def _gemini_tts(text, cfg, out_path):
 # ----------------------------------------------------------------------------
 
 def _ttsfree(text, cfg, out_path):
-    """TTSFree.com API se Hindi voice banao."""ˆ[\Ü˜\ÙM‚ˆ\WÚÙ^HHİÙœ™YWÚÙ^J
-Bˆ›ÚXÙWÜÙ\šXÙHHÙ™Ë™Ù]
-›ÚXÙWÜÙ\šXÙH‹œÙ\šXÙXš[ˆŠBˆ›ÚXÙWÚYHÙ™Ë™Ù]
-›ÚXÙWÚY‹šKRSˆŠBˆÜYYHİŠÙ™Ë™Ù]
-›ÚXÙWÜÜYY‹ŒŠJBˆ]ÚHİŠÙ™Ë™Ù]
-›ÚXÙWÜ]Ú‹ŒŠJB‚ˆÈTHX^LÚ\œÈ\ˆ™\]Y\İ]HZBˆÚ[šÜÈHÜÜ]ÜØÜš\
-^X^ØÚ\œÏML
-Bˆ\ÈH×Bˆ›ÜˆKÚ[šÈ[ˆ[[Y\˜]JÚ[šÜÊN‚ˆš[
-ˆˆİÙœ™YWHÚ[šÈÚH
-È_KŞÛ[ŠÚ[šÜÊ_HÙ[™\˜]HÈ˜ZHZK‹‹ˆŠBˆ\İÙ\œˆH›Û™Bˆ›Üˆ][\[ˆ˜[™ÙJK
-NˆÈ™]ÛÜšÈXØİ\HÈ][\ÂˆN‚ˆ™\ÜH™\]Y\İËœÜİ
-ˆšÎ‹ËİÙœ™YK˜ÛÛKØ\KİŒKİÈ‹ˆXY\œÏ^Âˆ˜\ZÙ^Hˆ\WÚÙ^KˆÛÛ[U\Hˆ˜\XØ][Û‹ÚœÛÛˆ‹ˆKˆœÛÛ^Âˆ^ˆÚ[šËˆ›ÚXÙTÙ\šXÙHˆ›ÚXÙWÜÙ\šXÙKˆ›ÚXÙRQˆ›ÚXÙWÚYˆ›ÚXÙTÜYYˆÜYYˆ›ÚXÙT]Úˆ]ÚˆKˆ[Y[İ]LLŒˆ
-Bˆ™\Üœ˜Z\ÙWÙ›Ü—Üİ]\Ê
-Bˆ]HH™\ÜšœÛÛŠ
-BˆYˆ]K™Ù]
-œİ]\ÈŠHOHœİXØÙ\ÜÈˆÜˆ›İ]K™Ù]
-˜]Y[Ñ]HŠN‚ˆ˜Z\ÙH[[YQ\œ›ÜŠˆÙœ™YH™\ÜÛœÙNˆÜİŠ]JVÎŒŒ_HŠBˆ\Hİ]Ü]œ\™[ÈˆÙœ™YWÜ\Ú_K›\È‚ˆ\Üš]WØ]\Ê˜\ÙM˜XÛÙJ]VÈ˜]Y[Ñ]H—JJBˆYˆ\œİ]
+    """TTSFree.com API se Hindi voice banao."""
+    import base64
 
-KœİÜÚ^™HL‚ˆ˜Z\ÙH[[YQ\œ›ÜŠÙœ™YH]Y[È˜Z]ÚİHX^XHŠBˆ\Ë˜\[™
-\
-Bˆœ™XZÂˆ^Ù\^Ù\[Ûˆ\ÈNˆÈ›ÜXNˆ“LBˆ\İÙ\œˆHBˆ[YKœÛY\
-H
-ˆ][\
-Bˆ[ÙN‚ˆ˜Z\ÙH[[YQ\œ›ÜŠˆÙœ™YHÚ[šÈÚH
-È_H˜Z[
-È][\ÊNˆÛ\İÙ\œŸHŠB‚ˆYˆ[Š\ÊHOHN‚ˆÚ][˜ÛÜJ\ÖÌKİ]Ü]
-Bˆ™]\›ˆİ]Ü]ˆØÛÛ˜Ø]Ùš[\Ê\Ëİ]Ü]™Y[˜ÛÙOUYJBˆ™]\›ˆİ]Ü]‚‚ˆÈKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKBˆÈ[™XÑHHRMš\˜]ØH™X\‹Z[X[ˆÛYÛİÈ
-YÙÚ[™Ñ˜XÙHÜXÙK”‘QJBˆÂˆÈ›ÚXÙKXÛÛ™H[Ù[ZNˆ^
-È™Y™\™[˜ÙH]Y[È
-È\ÚØH˜[œØÜš\‚ˆÈ[Ù[ÛYÛİZHHÚ\ÚHšHš\ÚHÙH™Y™\™[˜ÙHÙH[™H›ÛØZİHZK‚ˆÈ›ÚXÙ\ÈšXÚHS‘PÑWÕ“ÒPÑTÈYHZ[ˆ
-RMš\˜]ÙHÙ™šXÚX[›Û\ÊK‚ˆÈKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKB‚’S‘PÑWÕ“ÒPÑTÈHÂˆÈ[™\™Ù]XÈ™[X[H›ÚXÙHH[™HŞ[ÙH^YHÜXÙHØH\˜H[[È\ÚHÙBˆÈİHZK™\İY˜][ˆœ[š˜XšWÙ™[X[WÚ\HˆÂˆ\›ˆšÎ‹ËÙÚ]X‹˜ÛÛKĞRMš\˜]Ò[™XÑKÜ˜]ËÜ™YœËÚXYËÛXZ[‹Ü›Û\ËÔS—Ñ—ÒTWÌ‹Ø]ˆ‹ˆœ™Y—İ^ˆ—LL×LMÌWLLMHLLM×LLØ×LLÌLLÙWLLÎWLLMHLLLMÈLLÎLLÙWLLŒWLMLL˜×LM×LL™WLLÙ—LLÎLLÙWLLÌˆLLÎLM×LLÍWLLÙHLL˜×LLÙWLLÌLMÈLL—LLÙ—LLÌ—LM—LL—LLM×LLÍWLLÙWLLÎWLMLL—LLÙ—LMÌWLLLMLLX×LLÙ—LLÎLLLLÙWLLÌˆLLÎLLÙWLLLM—LMÌLLWLLLMÌLLˆLL™WLLÎWLLÙ—LLÎLM—LLÎLLÎWLM—LL×LL—LM‹ˆKˆÈ™[X[K\Bˆ[Z[Ù™[X[WÚ\HˆÂˆ\›ˆšÎ‹ËÙÚ]X‹˜ÛÛKĞRMš\˜]Ò[™XÑKÜ˜]ËÜ™YœËÚXYËÛXZ[‹Ü›Û\ËÕSWÑ—ÒTWÌKØ]ˆ‹ˆœ™Y—İ^ˆ—L˜NL˜™WL˜NWL˜ÙL˜NL˜Í—L˜NWLXWL˜ÙLXHL˜YWL˜™WL˜ML˜™—L˜ŒL˜™—L˜Y—L˜ÍÈLWL˜YWL˜Í×LXWL˜™WL˜NWL˜ÙL˜ŒˆL˜XWL˜Í—L˜ŒL˜™—L˜YˆL˜ML˜Œ×L˜ÙL˜Œ×L˜ÌWL˜XWLY—L˜™ˆL˜WL˜NL˜ÙL˜ML˜™—L˜ŒL˜ÌWLMWL˜ÙLMWL˜ÌKˆLMWL˜YWL˜ÙL˜YWL˜™ˆLMWL˜™WLXWL˜ÌWLMWL˜ÙLMWL˜ÍÈLWL˜NL˜ÙL˜ML˜XWL˜ÙL˜XWL˜ÌWL˜ML˜ÌHLXWL˜Í×L˜YWL˜ÙLNWL˜ÙL˜YWL˜™WLY—L˜NWL˜ÙL˜WL˜™WLNWL˜ÙLMWL˜™—LY—L˜Œ—L˜™WL˜YWL˜Ùˆ‹ˆKˆÈ™[X[KØ[H
-ÚZÚK\İ[H˜\œ˜][ÛŠBˆ›X\˜]WÙ™[X[WİÚZÚHˆÂˆ\›ˆšÎ‹ËÙÚ]X‹˜ÛÛKĞRMš\˜]Ò[™XÑKÜ˜]ËÜ™YœËÚXYËÛXZ[‹Ü›Û\ËÓPT—Ñ—ÕÒRÒWÌKØ]ˆ‹ˆœ™Y—İ^ˆ—LL—LLÙ—LLM×LL—LLLLÌLLÙWLLÍWLMLL—LLÙWLLÌLMÈLLWLL—LLLLÌLLÌÈLLMWLLMWLMLLÍ×LM×LLLLÌ—LLÙHLLMWLLXWLLÌLLÙHLLXWLLÙ—LLLMLLÎWLLÙ—LLLLMWLLÌLLŒ×LMLL™—LLÙWLLÎLLÙWLLŒLMLL˜WLMLLÌLL™—LLLMLLLLMWLM×LLÌ—LMÈLLX×LLÙWLLLL—LLÎWLMËˆ‹ˆKˆÈX[H›ÚXÙBˆ›X\˜]WÛX[WİÚZÚHˆÂˆ\›ˆšÎ‹ËÙÚ]X‹˜ÛÛKĞRMš\˜]Ò[™XÑKÜ˜]ËÜ™YœËÚXYËÛXZ[‹Ü›Û\ËÓPT—ÓWÕÒRÒWÌKØ]ˆ‹ˆœ™Y—İ^ˆ—LL™—LLÙHLL˜WLMLLÌLLWLLÙWLLÌ—LLÙHLL—LLMWLM—LLŒ×LMLLÎLLÍ—LMÈLL˜WLL—LLXWLLÙWLLLLÌLLLLÎLLÍWLMLL˜WLLÙWLLÎLM—LLLL™LLÙWLLÌLLLMLL™ˆLL—LL—LLŒHLLÎLL—LLÎWLLÙ—LLLLÙWLLXWLMLL×LLÙWLLÌLLÙHLLXWLLÙWLLÌLLÍ—LMÈLLWLLŒLMLLŒLLÙWLLÍWLMLLÎLL—LLŒ×LLÙˆLLXWLLÙWLLÌLLÍ—LMÈLL—LLMWLM—LLŒ×LLLMLLÎLLXWLMLL™—LLÙHLLWLLLMLLLLÌLMLLM×LLLLLLÙ—LLÍ×LM×LLÈLLMWLM×LLÌ—LLÙKˆ‹ˆKˆÈ™[X[K\BˆšØ[›˜YWÙ™[X[WÚ\HˆÂˆ\›ˆšÎ‹ËÙÚ]X‹˜ÛÛKĞRMš\˜]Ò[™XÑKÜ˜]ËÜ™YœËÚXYËÛXZ[‹Ü›Û\ËÒĞS—Ñ—ÒTWÌKØ]ˆ‹ˆœ™Y—İ^ˆ—LØNLØYWLØÙLØX—LØÙLØŒLØ™—LÎX×LØÙLÎX×LØŒ—LØÙLØŒ—LØ™ˆLÎMWLØÌ—LØŒ—LØ™—LÎ—LÎM×LØÙLØLØYWLØLØÙLØY—LØÍˆLÎ—LÎM×LØ™ˆLØNLØ™WLØNLØÙLØYLØ™WLØŒÈLØM—LØ™—LØNLØM—LØ™—LÎ—LØMˆLÎL—LØM—LØÙLØM—LØ™WLØLWLØÙLØMLØ™—LØM—LØÙLØM—LØÍ‹LÎ—LØM—LØÙLØŒLØÍˆLÎWLØM—LØÙLØNLØÌLÎMÈLØYWLØÍ—LÎMWLØ™WLØY—LØ™—LÎMWLØÙLÎ—LÎM×LØ™—LØŒLØØˆLØNLØ™—LØYWLØÙLØLØWLØ™WLØY—LØÙLØM—LØ™—LÎ—LØMˆLØX×LÎM×LØÍ—LØWLØŒLØ™—LØLØÙLÎMWLØØ—LØX×LØØ—LØM—LØÌHLÎWLÎ—LØMLØ™WLÎM×LØ™ˆLØNLØ™—LØŒLØ™WLØŒÈLÎ—LØY—LØÙLØMLØÌHLØNLÎ—LÎM×LØÍ‹ˆ‹ˆKŸB‚‚™YˆÜÜ]ÜØÜš\
-^X^ØÚ\œÏL
-N‚ˆˆˆ“[XšHØÜš\ÛÈÙ[[˜ÙH›İ[™\šY\ÈHÚ[šÜÈYHÙËˆˆˆ‚ˆÙ[[˜Ù\ÈH™KœÜ]
-ˆŠÏVË—LMO×JWÊÈ‹^œİš\
+    api_key = _ttsfree_key()
+    voice_service = cfg.get("voice_service", "servicebin")
+    voice_id = cfg.get("voice_id", "hi-IN")
+    speed = str(cfg.get("voice_speed", "0"))
+    pitch = str(cfg.get("voice_pitch", "0"))
 
-JBˆÚ[šÜËİ\ˆH×Kˆ‚ˆ›ÜˆÈ[ˆÙ[[˜Ù\Î‚ˆYˆ›İÎ‚ˆÛÛ[YBˆYˆ[Šİ\ŠH
-È[ŠÊH
-ÈHHX^ØÚ\œÎ‚ˆİ\ˆHˆØİ\ŸHÜßH‹œİš\
+    # API max 500 chars per request leta hai
+    chunks = _split_script(text, max_chars=450)
+    parts = []
+    for i, chunk in enumerate(chunks):
+        print(f"  [ttsfree] chunk {i + 1}/{len(chunks)} generate ho raha hai...")
+        last_err = None
+        for attempt in range(1, 4):   # network hiccup pe 3 attempts
+            try:
+                resp = requests.post(
+                    "https://ttsfree.com/api/v1/tts",
+                    headers={
+                        "apikey": api_key,
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "text": chunk,
+                        "voiceService": voice_service,
+                        "voiceID": voice_id,
+                        "voiceSpeed": speed,
+                        "voicePitch": pitch,
+                    },
+                    timeout=120,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                if data.get("status") != "success" or not data.get("audioData"):
+                    raise RuntimeError(f"ttsfree response: {str(data)[:200]}")
+                part = out_path.parent / f"ttsfree_part{i}.mp3"
+                part.write_bytes(base64.b64decode(data["audioData"]))
+                if part.stat().st_size < 1000:
+                    raise RuntimeError("ttsfree audio bahut chhota aaya")
+                parts.append(part)
+                break
+            except Exception as e:  # noqa: BLE001
+                last_err = e
+                time.sleep(5 * attempt)
+        else:
+            raise RuntimeError(f"ttsfree chunk {i + 1} fail (3 attempts): {last_err}")
 
-Bˆ[ÙN‚ˆYˆİ\‚ˆÚ[šÜË˜\[™
-İ\ŠBˆİ\ˆHÂˆYˆİ\‚ˆÚ[šÜË˜\[™
-İ\ŠBˆ™]\›ˆÚ[šÜÈÜˆİ^B‚‚ˆÈ[™XÑHÜXÙ\ÈÚHÚZ[ˆHZH˜Z[ÈÈYÛHHİHZBˆÈ
-Ù™šXÚX[ÜXÙHØXšHØXšHXZ[[˜[˜ÙKØœ™XZÈÈ˜]HZKˆÈZ\œ›ÜœÈ\ÚHÛÙHÙHÛÜY\ÈZ[ŠB’S‘PÑWÔÔPÑTÈHÂˆ˜ZMš\˜]Ò[™XÑH‹ˆ–X\ÚXXÚ[™SX\›š[™ËÒ[™XÑKLH‹ˆš›ÜÚ^X\Ú‹Ò[™XÑH‹—B‚‚™YˆİÜš]WİØ]Š]Ø[\WÜ˜]K]Y[×Ûœ
-N‚ˆˆˆ›[\H]Y[ÈÛÈĞUˆš[HYHZÚÈ
-[Û›ËM‹Xš]ÓJKˆˆˆ‚ˆ[\ÜØ]™B‚ˆ[\Ü[\H\Èœ‚ˆ]Y[ÈHœ˜\Ø\œ˜^J]Y[×Ûœ
-BˆYˆ]Y[Ë›™[HˆN‚ˆ]Y[ÈH]Y[Ë›YX[Š^\ÏLJBˆYˆ]Y[Ë™\HOHœš[M‚ˆ]Y[ÈHœ˜Û\
-]Y[Ë˜\İ\Jœ™›Ø]
-KLKŒKŒ
-Bˆ]Y[ÈH
-]Y[È
-ˆÌÍÊK˜\İ\Jœš[MŠBˆÚ]Ø]™K›Ü[ŠİŠ]
-KØˆŠH\ÈÎ‚ˆËœÙ]˜Ú[›™[ÊJBˆËœÙ]Ø[\ÚY
-ŠBˆËœÙ]œ˜[Y\˜]J[
-Ø[\WÜ˜]JJBˆËÜš]Yœ˜[Y\Ê]Y[ËØ]\Ê
-JB‚‚™YˆÚ[™XÙJ^Ù™Ëİ]Ü]
-N‚ˆˆˆRMš\˜][™XÑHšXHYÙÚ[™Ñ˜XÙHÜXÙH
-”‘QK™X\‹Z[X[ˆ[™JK‚‚ˆHÜXÙ\ÈÚHÚZ[ˆHİHZH
-Ù™šXÚX[OˆZ\œ›ÜœÊBˆHÜXÙHH]Y]YHYÈØZİHZH
-ÌMŒÈšY[ÈÙH^YHŒKLÈZ[ŠBˆH—ÕÒÑSˆ
-YØ\ˆÙ]ÊHÙH˜]K[[Z]™]\ˆ™ZHZBˆH[XšHØÜš\]]ÛX]XÈÙ[[˜ÙK[]™[Ú[šÜÈYH˜X]HZBˆˆˆ‚ˆœ›ÛHÜ˜Y[×ØÛY[[\ÜÛY[‚ˆ›ÚXÙWÛ˜[YHHÙ™Ë™Ù]
-›ÚXÙH‹œ[š˜XšWÙ™[X[WÚ\HŠBˆ›ÚXÙHHS‘PÑWÕ“ÒPÑTË™Ù]
-›ÚXÙWÛ˜[YJHÜˆS‘PÑWÕ“ÒPÑTÖÈœ[š˜XšWÙ™[X[WÚ\H—B‚ˆÈ™Y™\™[˜ÙH]Y[ÈZÈ˜X\ˆİÛ›ØYØ\šÙHØXÚHØ\ˆÂˆ™Y—Ü]Hİ]Ü]œ\™[Èš[™XÙWÜ™Y‹Ø]ˆ‚ˆYˆ›İ™Y—Ü]™^\İÊ
-N‚ˆˆH™\]Y\İË™Ù]
-›ÚXÙVÈ\›—K[Y[İ]LLŒ
-Bˆ‹œ˜Z\ÙWÙ›Ü—Üİ]\Ê
-Bˆ™Y—Ü]Üš]WØ]\Ê‹˜ÛÛ[
-B‚ˆÚ[šÜÈHÜÜ]ÜØÜš\
-^
-B‚ˆ\İÙ\œˆH›Û™Bˆ›ÜˆÜXÙH[ˆS‘PÑWÔÔPÑTÎ‚ˆN‚ˆÛY[HÛY[
-ÜXÙKÚÙ[[ÜË™[š\›Û‹™Ù]
-’—ÕÒÑSˆŠHÜˆ›Û™JB‚ˆ\ÈH×Bˆ›ÜˆKÚ[šÈ[ˆ[[Y\˜]JÚ[šÜÊN‚ˆš[
-ˆˆÒ[™XÑNÜÜXÙ_WHÚ[šÈÚH
-È_KŞÛ[ŠÚ[šÜÊ_HÙ[™\˜]HÈ˜ZHZK‹‹ˆŠBˆ™\İ[HÛY[œ™YXİ
-ˆ^XÚ[šËˆ™Y—Ø]Y[Ï\İŠ™Y—Ü]
-Kˆ™Y—İ^]›ÚXÙVÈœ™Y—İ^—Kˆ\WÛ˜[YOH‹ÜŞ[\Ú^™WÜÜYXÚ‹ˆ
-BˆØ[\WÜ˜]K]Y[ÈH™\İ[ÌK™\İ[ÌWBˆ\Hİ]Ü]œ\™[Èˆš[™XÙWÜ\Ú_KØ]ˆ‚ˆİÜš]WİØ]Š\Ø[\WÜ˜]K]Y[ÊBˆ\Ë˜\[™
-\
-B‚ˆİ]İØ]ˆHİ]Ü]Ú]ÜİY™š^
-‹Ø]ˆŠBˆYˆ[Š\ÊHOHN‚ˆÚ][˜ÛÜJ\ÖÌKİ]İØ]ŠBˆ™]\›ˆİ]İØ]‚ˆØÛÛ˜Ø]Ùš[\Ê\Ëİ]İØ]‹™Y[˜ÛÙOQ˜[ÙJBˆ™]\›ˆİ]İØ]‚ˆ^Ù\^Ù\[Ûˆ\ÈNˆÈ›ÜXNˆ“LHHYÛHÜXÙHHØ\›Âˆ\İÙ\œˆHBˆš[
-ˆˆĞT“’S‘ÎˆÜXÙH	ŞÜÜXÙ_IÈ˜Z[XH
-ÜİŠJVÎŒML_JHŠB‚ˆ˜Z\ÙH[[YQ\œ›ÜŠˆ’[™XÑHÙHØX\™HÜXÙ\È˜Z[ÈØ^YNˆÛ\İÙ\œŸHŠB‚‚™YˆÜ\›\Š^Ù™Ëİ]Ü]
-N‚ˆˆˆRMš\˜][™XÈ\›\‹UÈšXHYÙÚ[™Ñ˜XÙHÜXÙH
-”‘QJK‚ˆ[™XÑHİÛˆÛ™H\ˆ\ÚØH˜[˜XÚÈZHH˜]\˜[	Ğ[X[‰È›ÚXÙK‚ˆˆˆ‚ˆœ›ÛHÜ˜Y[×ØÛY[[\ÜÛY[‚ˆÜXÙHHÙ™Ë™Ù]
-œÜXÙH‹˜ZMš\˜]Ú[™XË\\›\‹]ÈŠBˆÈ›ÚXÙH\ØÜš\[ÛˆYHHÜXZÙ\ˆØH˜[[HİHZH
-[X[‹Ô›Ú]Ñ]XKÔ˜[šJBˆ\ØÈHÙ™Ë™Ù]
-ˆ›ÚXÙWÙ\ØÈ‹ˆ[X[ˆÜXZÜÈ[ˆ[ˆ^™\ÜÚ]™H[™[™\™Ù]XÈÛ™K]HÛYÚH˜\İ‚ˆœXÙK[ˆH™\HÛX\ˆ™XÛÜ™[™ÈÚ]›È˜XÚÙÜ›İ[™›Ú\ÙKˆ‹ˆ
-B‚ˆ\İÙ\œˆH›Û™Bˆ›Üˆ\WÛ˜[YH[ˆ
-‹ÙÙ[™\˜]WÙš[™][™Y‹‹ÙÙ[™\˜]WØ˜\ÙHŠN‚ˆN‚ˆÛY[HÛY[
-ÜXÙKÚÙ[[ÜË™[š\›Û‹™Ù]
-’—ÕÒÑSˆŠHÜˆ›Û™JBˆ™\İ[HÛY[œ™YXİ
-ˆ^]^\ØÜš\[ÛY\ØË\WÛ˜[YOX\WÛ˜[YBˆ
-Bˆ]H™\İ[ÌHYˆ\Ú[œİ[˜ÙJ™\İ[
-\K\İ
-JH[ÙH™\İ[ˆYˆ][™]
-]
-K™^\İÊ
-H[™]
-]
-Kœİ]
+    if len(parts) == 1:
+        shutil.copy(parts[0], out_path)
+        return out_path
+    _concat_files(parts, out_path, reencode=True)
+    return out_path
 
-KœİÜÚ^™HˆL‚ˆÚ][˜ÛÜJ]İ]Ü]
-Bˆ™]\›ˆİ]Ü]ˆ^Ù\^Ù\[Ûˆ\ÈNˆÈ›ÜXNˆ“LHHš[™][™YOˆ˜\ÙH˜[˜XÚÂˆ\İÙ\œˆHBˆÛÛ[YB‚ˆ˜Z\ÙH[[YQ\œ›ÜŠˆ”\›\ˆÈ
-ÜXÙJH˜Z[ˆÛ\İÙ\œŸHŠB‚‚˜\Ş[˜ÈYˆÙYÙWİ×Ø\Ş[˜Ê^Ù™Ëİ]Ü]
-N‚ˆ[\ÜYÙWİÂ‚ˆÈ“ÒPÑH[ˆ
-ÛÜšÙ›İÈÙHX]HZJHÛÛ™šYÈÛÈİ™\œšYHØ\HZBˆ›ÚXÙHHÜË™[š\›Û‹™Ù]
-•“ÒPÑHŠHÜˆÙ™Ë™Ù]
-›ÚXÙH‹šKRS‹SXY\“™]\˜[ŠBˆ˜]HHÙ™Ë™Ù]
-œ˜]H‹ŠÌL‰HŠBˆÛÛ[][šXØ]HHYÙWİËÛÛ[][šXØ]J^›ÚXÙK˜]O\˜]JBˆ]ØZ]ÛÛ[][šXØ]KœØ]™JİŠİ]Ü]
-JB‚‚™YˆÙYÙWİÊ^Ù™Ëİ]Ü]
-N‚ˆ\Ş[˜Ú[Ëœ[ŠÙYÙWİ×Ø\Ş[˜Ê^Ù™Ëİ]Ü]
-JBˆ™]\›ˆİ]Ü]‚‚™YˆÙÙ]Ø\WÚÙ^J
-N‚ˆÙ^HHÜË™[š\›Û‹™Ù]
-•×ĞTWÒÑVHŠBˆYˆ›İÙ^N‚ˆ˜Z\ÙH[[YQ\œ›ÜŠ•×ĞTWÒÑVH[‹ÜÙXÜ™]Ù]˜ZHZKˆŠBˆ™]\›ˆÙ^B‚‚™YˆØİ\İÛWÚ
-^Ù™Ëİ]Ü]
-N‚ˆˆˆ‘Ù[™\šXÈ[\]HH\˜HÛÚHšHÈTHXZ[ˆYÈØ\›È
-ÛÙHÚ[™ÙH™\›ÊKˆˆˆ‚ˆXY\œÈHÈÛÛ[U\Hˆ˜\XØ][Û‹ÚœÛÛˆŸBˆ]]HÙ™Ë™Ù]
-˜]]ÚXY\ˆ‹ˆŠBˆYˆ]]‚ˆXY\œÖÈ]]Üš^˜][Ûˆ—HH]]œ™\XÙJŞÕ×ĞTWÒÑV__H‹ÙÙ]Ø\WÚÙ^J
-JB‚ˆ›ÙHHÛÜK™Y\ÛÜJÙ™Ë™Ù]
-˜›ÙH‹ßJJBˆ›ÜˆËˆ[ˆ›ÙKš][\Ê
-N‚ˆYˆ\Ú[œİ[˜ÙJ‹İŠN‚ˆ›ÙVÚ×HH‹œ™\XÙJİ^H‹^
-B‚ˆ™\ÜH™\]Y\İËœÜİ
-Ù™ÖÈ™[™Ú[—KXY\œÏZXY\œËœÛÛX›ÙK[Y[İ]LÌ
-Bˆ™\Üœ˜Z\ÙWÙ›Ü—Üİ]\Ê
-B‚ˆ™\ÜÛœÙWÜÜXÈHÙ™Ë™Ù]
-œ™\ÜÛœÙH‹˜š[˜\HŠBˆYˆ™\ÜÛœÙWÜÜXÈOH˜š[˜\H‚ˆİ]Ü]Üš]WØ]\Ê™\Ü˜ÛÛ[
-Bˆ[Yˆ™\ÜÛœÙWÜÜXËœİ\İÚ]
-˜˜\ÙMÚœÛÛˆŠN‚ˆ]HH™\ÜšœÛÛŠ
-Bˆ›Üˆ\[ˆ™\ÜÛœÙWÜÜXËœÜ]
-ˆ‹JVÌWKœÜ]
-‹ˆŠN‚ˆ]HH]VÜ\BˆYˆ\Ú[œİ[˜ÙJ]KİŠN‚ˆ]HH×Ú[\Ü×Ê˜˜\ÙMŠK˜XÛÙJ]JBˆİ]Ü]Üš]WØ]\Ê]JBˆ[ÙN‚ˆ˜Z\ÙH˜[YQ\œ›ÜŠˆœ™\ÜÛœÙHÜXÈØ[XZš˜ZHX^XNˆÜ™\ÜÛœÙWÜÜXÈ\ŸHŠBˆ™]\›ˆİ]Ü]‚‚™YˆÜØ\˜[J^Ù™Ëİ]Ü]
-N‚ˆˆˆ”Ø\˜[HRHÈ^[\H[\[Y[][Û‹ˆˆˆ‚ˆ[\Ü˜\ÙM‚ˆ™\ÜH™\]Y\İËœÜİ
-ˆšÎ‹ËØ\KœØ\˜[K˜ZKİ^]Ë\ÜYXÚ‹ˆXY\œÏ^È˜\K\İXœØÜš\[Û‹ZÙ^HˆÙÙ]Ø\WÚÙ^J
-_KˆœÛÛ^Âˆ^ˆ^ˆœÜXZÙ\ˆˆÙ™Ë™Ù]
-œÜXZÙ\ˆ‹›YY\˜HŠKˆ›[Ù[ˆÙ™Ë™Ù]
-›[Ù[‹˜[[]ŒˆŠKˆœÜYXÚÜ˜]HˆÙ™Ë™Ù]
-œÜYXÚÜ˜]H‹KŒMJKˆKˆ[Y[İ]LÌˆ
-Bˆ™\Üœ˜Z\ÙWÙ›Ü—Üİ]\Ê
-Bˆ]Y[×ØH™\ÜšœÛÛŠ
-VÈ˜]Y[ÜÈ—VÌBˆİ]Ü]Üš]WØ]\Ê˜\ÙM˜XÛÙJ]Y[×Ø
-JBˆ™]\›ˆİ]Ü]
+
+# ----------------------------------------------------------------------------
+# IndicF5 - AI4Bharat ka near-human polyglot TTS (HuggingFace Space, FREE)
+#
+# Voice-clone model hai: text + reference audio + uska transcript.
+# Model polyglot hai - kisi bhi bhasha ke reference se Hindi bol sakta hai.
+# Voices niche INDICF5_VOICES me hain (AI4Bharat ke official prompts).
+# ----------------------------------------------------------------------------
+
+INDICF5_VOICES = {
+    # energetic female voice - Hindi synth ke liye space ka apna demo isi se
+    # hota hai, best default
+    "punjabi_female_happy": {
+        "url": "https://github.com/AI4Bharat/IndicF5/raw/refs/heads/main/prompts/PAN_F_HAPPY_00002.wav",
+        "ref_text": "\u0a07\u0a71\u0a15 \u0a17\u0a3c\u0a30\u0a3e\u0a39\u0a15 \u0a28\u0a47 \u0a38\u0a3e\u0a21\u0a40 \u0a2c\u0a47\u0a2e\u0a3f\u0a38\u0a3e\u0a32 \u0a38\u0a47\u0a35\u0a3e \u0a2c\u0a3e\u0a30\u0a47 \u0a26\u0a3f\u0a32\u0a4b\u0a02\u0a17\u0a35\u0a3e\u0a39\u0a40 \u0a26\u0a3f\u0a71\u0a24\u0a40 \u0a1c\u0a3f\u0a38 \u0a28\u0a3e\u0a32 \u0a38\u0a3e\u0a28\u0a42\u0a70 \u0a05\u0a28\u0a70\u0a26 \u0a2e\u0a39\u0a3f\u0a38\u0a42\u0a38 \u0a39\u0a4b\u0a07\u0a06\u0964",
+    },
+    # female, happy
+    "tamil_female_happy": {
+        "url": "https://github.com/AI4Bharat/IndicF5/raw/refs/heads/main/prompts/TAM_F_HAPPY_00001.wav",
+        "ref_text": "\u0ba8\u0bbe\u0ba9\u0bcd \u0ba8\u0bc6\u0ba9\u0b9a\u0bcd\u0b9a \u0bae\u0bbe\u0ba4\u0bbf\u0bb0\u0bbf\u0baf\u0bc7 \u0b85\u0bae\u0bc7\u0b9a\u0bbe\u0ba9\u0bcd\u0bb2 \u0baa\u0bc6\u0bb0\u0bbf\u0baf \u0ba4\u0bb3\u0bcd\u0bb3\u0bc1\u0baa\u0b9f\u0bbf \u0bb5\u0ba8\u0bcd\u0ba4\u0bbf\u0bb0\u0bc1\u0b95\u0bcd\u0b95\u0bc1. \u0b95\u0bae\u0bcd\u0bae\u0bbf \u0b95\u0bbe\u0b9a\u0bc1\u0b95\u0bcd\u0b95\u0bc7 \u0b85\u0ba8\u0bcd\u0ba4\u0baa\u0bcd \u0baa\u0bc1\u0ba4\u0bc1 \u0b9a\u0bc7\u0bae\u0bcd\u0b9a\u0b99\u0bcd \u0bae\u0bbe\u0b9f\u0ba9\u0bcd \u0bb5\u0bbe\u0b99\u0bcd\u0b95\u0bbf\u0b9f\u0bb2\u0bbe\u0bae\u0bcd.",
+    },
+    # female, calm (wiki-style narration)
+    "marathi_female_wiki": {
+        "url": "https://github.com/AI4Bharat/IndicF5/raw/refs/heads/main/prompts/MAR_F_WIKI_00001.wav",
+        "ref_text": "\u0926\u093f\u0917\u0902\u0924\u0930\u093e\u0935\u094d\u0926\u093e\u0930\u0947 \u0905\u0902\u0924\u0930\u0933 \u0915\u0915\u094d\u0937\u0947\u0924\u0932\u093e \u0915\u091a\u0930\u093e \u091a\u093f\u0928\u094d\u0939\u093f\u0924 \u0915\u0930\u0923\u094d\u092f\u093e\u0938\u093e\u0920\u0940 \u092a\u094d\u0930\u092f\u0924\u094d\u0928 \u0915\u0947\u0932\u0947 \u091c\u093e\u0924 \u0906\u0939\u0947.",
+    },
+    # male voice
+    "marathi_male_wiki": {
+        "url": "https://github.com/AI4Bharat/IndicF5/raw/refs/heads/main/prompts/MAR_M_WIKI_00001.wav",
+        "ref_text": "\u092f\u093e \u092a\u094d\u0930\u0925\u093e\u0932\u093e \u090f\u0915\u094b\u0923\u0940\u0938\u0936\u0947 \u092a\u0902\u091a\u093e\u0924\u0930 \u0908\u0938\u0935\u0940 \u092a\u093e\u0938\u0942\u0928 \u092d\u093e\u0930\u0924\u0940\u092f \u0926\u0902\u0921 \u0938\u0902\u0939\u093f\u0924\u093e\u091a\u0940 \u0927\u093e\u0930\u093e \u091a\u093e\u0930\u0936\u0947 \u0905\u0920\u094d\u0920\u093e\u0935\u0940\u0938 \u0906\u0923\u093f \u091a\u093e\u0930\u0936\u0947 \u090f\u0915\u094b\u0923\u0924\u0940\u0938\u091a\u094d\u092f\u093e \u0905\u0928\u094d\u0924\u0930\u094d\u0917\u0924 \u0928\u093f\u0937\u0947\u0927 \u0915\u0947\u0932\u093e.",
+    },
+    # female, happy
+    "kannada_female_happy": {
+        "url": "https://github.com/AI4Bharat/IndicF5/raw/refs/heads/main/prompts/KAN_F_HAPPY_00001.wav",
+        "ref_text": "\u0ca8\u0cae\u0ccd \u0cab\u0ccd\u0cb0\u0cbf\u0c9c\u0ccd\u0c9c\u0cb2\u0ccd\u0cb2\u0cbf \u0c95\u0cc2\u0cb2\u0cbf\u0c82\u0c97\u0ccd \u0cb8\u0cae\u0cb8\u0ccd\u0caf\u0cc6 \u0c86\u0c97\u0cbf \u0ca8\u0cbe\u0ca8\u0ccd \u0cad\u0cbe\u0cb3 \u0ca6\u0cbf\u0ca8\u0ca6\u0cbf\u0c82\u0ca6 \u0c92\u0ca6\u0ccd\u0ca6\u0cbe\u0ca1\u0ccd\u0ca4\u0cbf\u0ca6\u0ccd\u0ca6\u0cc6, \u0c86\u0ca6\u0ccd\u0cb0\u0cc6 \u0c85\u0ca6\u0ccd\u0ca8\u0cc0\u0c97 \u0cae\u0cc6\u0c95\u0cbe\u0ca8\u0cbf\u0c95\u0ccd \u0c86\u0c97\u0cbf\u0cb0\u0ccb \u0ca8\u0cbf\u0cae\u0ccd \u0cb8\u0cb9\u0cbe\u0caf\u0ccd\u0ca6\u0cbf\u0c82\u0ca6 \u0cac\u0c97\u0cc6\u0cb9\u0cb0\u0cbf\u0cb8\u0ccd\u0c95\u0ccb\u0cac\u0ccb\u0ca6\u0cc1 \u0c85\u0c82\u0ca4\u0cbe\u0c97\u0cbf \u0ca8\u0cbf\u0cb0\u0cbe\u0cb3 \u0c86\u0caf\u0ccd\u0ca4\u0cc1 \u0ca8\u0c82\u0c97\u0cc6.",
+    },
+}
+
+
+def _split_script(text, max_chars=240):
+    """Lambi script ko sentence boundaries pe chunks me todo."""
+    sentences = re.split(r"(?<=[.\u0964!?])\s+", text.strip())
+    chunks, cur = [], ""
+    for s in sentences:
+        if not s:
+            continue
+        if len(cur) + len(s) + 1 <= max_chars:
+            cur = f"{cur} {s}".strip()
+        else:
+            if cur:
+                chunks.append(cur)
+            cur = s
+    if cur:
+        chunks.append(cur)
+    return chunks or [text]
+
+
+# IndicF5 spaces ki chain - pehla fail ho to agla try hota hai
+# (official space kabhi kabhi maintenance/break ho jata hai,
+#  mirrors usi code ke copies hain)
+INDICF5_SPACES = [
+    "ai4bharat/IndicF5",
+    "YashMachineLearning/IndicF5-1",
+    "joshiyash666/IndicF5",
+]
+
+
+def _write_wav(path, sample_rate, audio_np):
+    """numpy audio ko WAV file me likho (mono, 16-bit PCM)."""
+    import wave
+
+    import numpy as np
+
+    audio = np.asarray(audio_np)
+    if audio.ndim > 1:
+        audio = audio.mean(axis=1)
+    if audio.dtype != np.int16:
+        audio = np.clip(audio.astype(np.float64), -1.0, 1.0)
+        audio = (audio * 32767).astype(np.int16)
+    with wave.open(str(path), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(int(sample_rate))
+        w.writeframes(audio.tobytes())
+
+
+def _indicf5(text, cfg, out_path):
+    """AI4Bharat IndicF5 via HuggingFace Space (FREE, near-human Hindi).
+
+    - Spaces ki chain try hoti hai (official -> mirrors)
+    - Space pe queue lag sakti hai (30-60s video ke liye ~1-3 min)
+    - HF_TOKEN (agar set ho) se rate-limit better rehti hai
+    - Lambi script automatic sentence-level chunks me jaati hai
+    """
+    from gradio_client import Client
+
+    voice_name = cfg.get("voice", "punjabi_female_happy")
+    voice = INDICF5_VOICES.get(voice_name) or INDICF5_VOICES["punjabi_female_happy"]
+
+    # reference audio ek baar download karke cache kar lo
+    ref_path = out_path.parent / "indicf5_ref.wav"
+    if not ref_path.exists():
+        r = requests.get(voice["url"], timeout=120)
+        r.raise_for_status()
+        ref_path.write_bytes(r.content)
+
+    chunks = _split_script(text)
+
+    last_err = None
+    for space in INDICF5_SPACES:
+        try:
+            client = Client(space, token=os.environ.get("HF_TOKEN") or None)
+
+            parts = []
+            for i, chunk in enumerate(chunks):
+                print(f"  [IndicF5:{space}] chunk {i + 1}/{len(chunks)} generate ho raha hai...")
+                result = client.predict(
+                    text=chunk,
+                    ref_audio=str(ref_path),
+                    ref_text=voice["ref_text"],
+                    api_name="/synthesize_speech",
+                )
+                sample_rate, audio = result[0], result[1]
+                part = out_path.parent / f"indicf5_part{i}.wav"
+                _write_wav(part, sample_rate, audio)
+                parts.append(part)
+
+            out_wav = out_path.with_suffix(".wav")
+            if len(parts) == 1:
+                shutil.copy(parts[0], out_wav)
+                return out_wav
+            _concat_files(parts, out_wav, reencode=False)
+            return out_wav
+        except Exception as e:  # noqa: BLE001 - agla space try karo
+            last_err = e
+            print(f"  WARNING: space '{space}' fail hua ({str(e)[:150]})")
+
+    raise RuntimeError(f"IndicF5 ke saare spaces fail ho gaye: {last_err}")
+
+
+def _parler(text, cfg, out_path):
+    """AI4Bharat Indic Parler-TTS via HuggingFace Space (FREE).
+    IndicF5 down hone par iska fallback hai - natural 'Aman' voice.
+    """
+    from gradio_client import Client
+
+    space = cfg.get("space", "ai4bharat/indic-parler-tts")
+    # voice description me hi speaker ka naam hota hai (Aman/Rohit/Divya/Rani)
+    desc = cfg.get(
+        "voice_desc",
+        "Aman speaks in an expressive and energetic tone, at a slightly fast "
+        "pace, in a very clear recording with no background noise.",
+    )
+
+    last_err = None
+    for api_name in ("/generate_finetuned", "/generate_base"):
+        try:
+            client = Client(space, token=os.environ.get("HF_TOKEN") or None)
+            result = client.predict(
+                text=text, description=desc, api_name=api_name
+            )
+            path = result[0] if isinstance(result, (tuple, list)) else result
+            if path and Path(path).exists() and Path(path).stat().st_size > 1000:
+                shutil.copy(path, out_path)
+                return out_path
+        except Exception as e:  # noqa: BLE001 - finetuned -> base fallback
+            last_err = e
+            continue
+
+    raise RuntimeError(f"Parler TTS (space) fail: {last_err}")
+
+
+async def _edge_tts_async(text, cfg, out_path):
+    import edge_tts
+
+    # VOICE env (workflow se aata hai) config ko override karta hai
+    voice = os.environ.get("VOICE") or cfg.get("voice", "hi-IN-MadhurNeural")
+    rate = cfg.get("rate", "+12%")
+    communicate = edge_tts.Communicate(text, voice, rate=rate)
+    await communicate.save(str(out_path))
+
+
+def _edge_tts(text, cfg, out_path):
+    asyncio.run(_edge_tts_async(text, cfg, out_path))
+    return out_path
+
+
+def _get_api_key():
+    key = os.environ.get("TTS_API_KEY")
+    if not key:
+        raise RuntimeError("TTS_API_KEY env/secret set nahi hai.")
+    return key
+
+
+def _custom_http(text, cfg, out_path):
+    """Generic template - apna koi bhi TTS API yahan plug karo (code change zero)."""
+    headers = {"Content-Type": "application/json"}
+    auth = cfg.get("auth_header", "")
+    if auth:
+        headers["Authorization"] = auth.replace("{{TTS_API_KEY}}", _get_api_key())
+
+    body = copy.deepcopy(cfg.get("body", {}))
+    for k, v in body.items():
+        if isinstance(v, str):
+            body[k] = v.replace("{text}", text)
+
+    resp = requests.post(cfg["endpoint"], headers=headers, json=body, timeout=300)
+    resp.raise_for_status()
+
+    response_spec = cfg.get("response", "binary")
+    if response_spec == "binary":
+        out_path.write_bytes(resp.content)
+    elif response_spec.startswith("base64_json:"):
+        data = resp.json()
+        for part in response_spec.split(":", 1)[1].split("."):
+            data = data[part]
+        if isinstance(data, str):
+            data = __import__("base64").b64decode(data)
+        out_path.write_bytes(data)
+    else:
+        raise ValueError(f"response spec samajh nahi aaya: {response_spec!r}")
+    return out_path
+
+
+def _sarvam(text, cfg, out_path):
+    """Sarvam AI TTS example implementation."""
+    import base64
+
+    resp = requests.post(
+        "https://api.sarvam.ai/text-to-speech",
+        headers={"api-subscription-key": _get_api_key()},
+        json={
+            "text": text,
+            "speaker": cfg.get("speaker", "meera"),
+            "model": cfg.get("model", "bulbul-v2"),
+            "speech_rate": cfg.get("speech_rate", 1.15),
+        },
+        timeout=300,
+    )
+    resp.raise_for_status()
+    audio_b64 = resp.json()["audios"][0]
+    out_path.write_bytes(base64.b64decode(audio_b64))
+    return out_path
