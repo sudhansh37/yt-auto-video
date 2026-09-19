@@ -1,13 +1,14 @@
 # Hindi Shorts Bot (Zack D. Films -> Hindi YouTube Shorts)
 
-Automated pipeline: **Zack D. Films ki shorts -> Gemini analysis -> TTSFree
-Hindi voice -> 9:16 edit (bottom-crop + effects + slow music) -> YouTube
-Shorts scheduled upload (din me 4 baar)**. Sab kuch GitHub Actions pe chalta hai.
+Automated pipeline: **Zack D. Films ki shorts -> Gemini analysis -> Gemini
+TTS Hindi voice -> 9:16 edit (bottom-crop + effects + slow music) -> YouTube
+Shorts scheduled upload (din me 4 baar)**. Sab kuch GitHub Actions pe chalta
+hai.
 
-> Note: ye repo pehle se lage secrets use karta hai — `GEMINI_API_KEY`,
-> `YT_CLIENT_ID`, `YT_CLIENT_SECRET`, `YT_REFRESH_TOKEN`, `HF_TOKEN`.
-> TTS voice ke liye **`ttsfree`** secret me TTSFree.com ka apikey daalo
-> (ttsfree.com -> Profile -> API Key).
+> Note: ye repo in secrets ko use karta hai — `GEMINI_API_KEY` (analysis +
+> TTS voice, dono ke liye), `YT_CLIENT_ID`, `YT_CLIENT_SECRET`,
+> `YT_REFRESH_TOKEN`, `HF_TOKEN`, aur (optional) `ttsfree` — TTSFree.com
+> ka apikey fallback ke liye.
 
 ```
 channel se short pick (duplicate check)      [src/downloader.py + src/history.py]
@@ -21,8 +22,8 @@ Gemini se video analysis -> Hindi script    [src/analyzer.py]
 + 503 "high demand" aaye to retry + fallback models
         |
         v
-TTSFree API se natural Hindi voice           [src/tts.py]
-(fallback chain: IndicF5 -> Parler -> edge-tts)
+Gemini TTS se natural Hindi voice             [src/tts.py]
+(fallback chain: TTSFree -> IndicF5 -> Parler -> edge-tts)
 (original audio hata diya jata hai, koi gap nahi)
         |
         v
@@ -76,21 +77,23 @@ rakh lo — output pasand aaye tab `public` kar dena.
 Duplicate kabhi nahi hota: `data/history.json` track karta hai, har run ke
 baad GitHub pe commit hota hai. `max_history: 300` full hone pe reset.
 
-## TTS / voice (TTSFree API)
+## TTS / voice (Gemini TTS)
 
-- Primary: **TTSFree.com ka API** — repo secret **`ttsfree`** me apikey
-  daalo (ttsfree.com -> Profile -> API Key).
-- Voice settings `config.yaml` me (`tts.ttsfree`):
-  - `voice_id`: `hi-IN` = Madhur (male), `hi-IN2` = Swara (female)
-  - `voice_service`: `servicebin` ya `servicegoo`
-  - `voice_speed` / `voice_pitch`: -100 se 100
+- Primary: **Google Gemini TTS** — wahi `GEMINI_API_KEY` use hota hai jo
+  pehle se repo me hai, koi naya key nahi chahiye. Natural Hindi voice.
+- Voice settings `config.yaml` me (`tts.gemini`):
+  - Male voices: `Puck` (energetic, default), `Charon` (informative),
+    `Fenrir` (excitable), `Orus` (firm)
+  - Female voices: `Kore`, `Aoede`, `Leda`, `Zephyr`
+  - `style`: tone control (natural-language prompt se)
 - **No-gap**: script me se ellipses/dashes/line-breaks hata ke natural
   sentences banaye jaate hain — voice ke beech koi lamba gap nahi.
 - **Fallback chain** (koi bhi step fail ho to agla automatic):
-  1. TTSFree API
-  2. AI4Bharat IndicF5 (free HF space)
-  3. `ai4bharat/indic-parler-tts` (Aman voice)
-  4. edge-tts (Madhur voice, koi API nahi)
+  1. Gemini TTS (`GEMINI_API_KEY`)
+  2. TTSFree API (secret `ttsfree`, agar set ho)
+  3. AI4Bharat IndicF5 (free HF space)
+  4. `ai4bharat/indic-parler-tts` (Aman voice)
+  5. edge-tts (Madhur voice, koi API nahi)
 
 ## Effects aur color grade (config.yaml me)
 

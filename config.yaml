@@ -17,14 +17,23 @@ gemini:
   # (analyzer.py me FALLBACK_MODELS dekho)
 
 # ---------------- TTS (Hindi voice) ----------------
-# provider: "ttsfree"    -> TTSFree.com ka API (secret 'ttsfree' me apikey).
-#                          Fail hone pe fallback chain: IndicF5 -> Parler
-#                          -> edge-tts (video kabhi fail nahi hoti)
-# provider: "indicf5"    -> AI4Bharat IndicF5 (HF space, free)
+# provider: "gemini"    -> Google Gemini TTS (DEFAULT). GEMINI_API_KEY se chalta
+#                          hai (already repo me). Natural voice, male default.
+#                          Fail hone pe fallback chain: TTSFree -> IndicF5 ->
+#                          Parler -> edge-tts (video kabhi fail nahi hoti)
+# provider: "ttsfree"   -> TTSFree.com ka API (secret 'ttsfree' me apikey)
+# provider: "indicf5"   -> AI4Bharat IndicF5 (HF space, free)
 # provider: "edge_tts"   -> Microsoft Edge TTS (free, no key)
 # provider: "custom_http"-> apna koi bhi TTS API (template niche)
 tts:
-  provider: "ttsfree"
+  provider: "gemini"
+
+  gemini:
+    model: "gemini-2.5-flash-preview-tts"
+    # Male:   Puck (energetic), Charon (informative), Fenrir (excitable), Orus (firm)
+    # Female: Kore, Aoede, Leda, Zephyr
+    voice: "Puck"
+    style: "Say in an energetic, engaging and clear YouTube shorts narrator tone, speaking natural Hindi:"
 
   ttsfree:
     voice_service: "servicebin"   # "servicebin" ya "servicegoo"

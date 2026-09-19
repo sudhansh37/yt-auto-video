@@ -4,7 +4,7 @@ Hindi Shorts Bot - main pipeline
 1. Source channel se ek short pick karo (latest / random / mix) - duplicates skip
 2. yt-dlp se download karo (full HD vertical)
 3. Gemini se video analysis -> Hindi script + title + description
-4. TTS se Hindi voice banao (TTSFree API; fail hone pe fallback chain)
+4. TTS se Hindi voice banao (Gemini TTS; fail hone pe fallback chain)
 5. ffmpeg: 9:16 crop (top safe, bottom se crop - English caption wahi rehta
    hai aur kat jata hai) + white canvas + zoom/pan + color grade + sharpness
    + slow background music. KOI CAPTION/TEXT NAHI.
@@ -87,8 +87,8 @@ def main():
     analysis = analyze_video(src, duration, cfg["gemini"])
     print(f"  Title: {analysis['title']}")
 
-    # ---- 4. TTS (TTSFree Hindi voice, no-gap cleanup ke saath) ----
-    print("Hindi voice generate ho rahi hai (TTSFree)...")
+    # ---- 4. TTS (Gemini TTS Hindi voice, no-gap cleanup ke saath) ----
+    print("Hindi voice generate ho rahi hai (Gemini TTS)...")
     audio = synthesize(analysis["script"], cfg["tts"], work / "voice.mp3")
     print(f"Hindi voice ready: {audio.name}")
 
