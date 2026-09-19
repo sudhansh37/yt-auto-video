@@ -2,16 +2,18 @@
 TTS module - Hindi voice banata hai.
 
 Providers (config.yaml me choose karo):
+  - "ttsfree"    : TTSFree.com ka API (premium). Secret 'ttsfree' me apikey.
+                   Fail hone pe fallback chain: IndicF5 -> Parler -> edge-tts
   - "indicf5"    : AI4Bharat IndicF5 (HuggingFace Space) - FREE, near-human
-                   natural Hindi. Voice-clone based: ek reference audio + uska
-                   transcript chahiye. Fail hone pe Parler -> edge-tts fallback.
   - "edge_tts"   : Microsoft Edge TTS (free, no key) - Madhur voice
   - "custom_http": apna koi bhi TTS API (template config.yaml me)
   - "sarvam"     : Sarvam AI TTS example
 
-NO-GAP FIX (robotic voice / spaces ka ilaaj):
-  clean_for_speech() text se faltu pause banane wali cheezein hata deta hai
-  (ellipses, dashes, extra commas, line breaks, sentence-end ki lambi pause).
+NO-GAP (natural voice):
+  clean_for_speech() sirf faltu cheezein hataata hai (ellipses, dashes,
+  emojis, repeated punctuation, line breaks) - sentence punctuation
+  RAKHTA hai, kyunki natural intonation wahi se aati hai. Voice ke
+  beech me koi lamba gap nahi rehta.
 """
 import asyncio
 import copy
@@ -19,14 +21,20 @@ import os
 import re
 import shutil
 import subprocess
+import time
 from pathlib import Path
 
 import requests
 
 
 def clean_for_speech(text):
-    """TTS text se faltu pause banane wali cheezein hata do."""
-    # ellipses (..., ...) -> single full stop (ye TTS me sabse lambi pause banata hai)
+    """TTS text se faltu pause banane wali cheezein hata do.
+
+    IMPORTANT: sentence-ending punctuation (\u0964 . ! ?) ko rakhna hai -
+    natural TTS isi se intonation aur natural pauses banata hai.
+    Sirf wahi cheezein hatao jo LAMBE silence gap banati hain.
+    """
+    # ellipses (..., ...) -> single full stop (ye sabse lamba gap banata hai)
     text = re.sub(r"\.{2,}", ".", text)
     text = text.replace("\u2026", ".")
     # dashes (-, \u2013, \u2014) jo beech me pause banate hain
@@ -34,18 +42,13 @@ def clean_for_speech(text):
     # emojis hatao (kuch TTS engines inpe atak jaate hain)
     text = re.sub("[\U0001F300-\U0001FAFF\u2600-\u27BF\uFE0F]", "", text)
     # repeated punctuation -> single
-    text = re.sub(r"([!?\u0964,])\1+", r"\1", text)
+    text = re.sub(r"([!?\u0964.,])\1+", r"\1", text)
     # extra commas (har comma ek pause hota hai)
     text = re.sub(r",\s*,", ",", text)
     # newlines / multiple spaces -> single space (paragraph gap hata ke flow me)
-    text = re.sub(r"\s+", " ", text)
-    # NO-GAP: sentence end (purna viram) ko comma bana do -
-    # isse lambi pause chhoti ho jati hai aur bol ek flow me chalta hai
-    text = text.replace("\u0964", ",").replace(".", ",")
-    # ab double commas/punctuation jama na ho
-    text = re.sub(r",\s*,", ",", text)
-    text = re.sub(r",\s*([!?])", r" \1", text)
-    return text.strip(" ,").strip()
+    text = re.sub(r"\s*\n\s*", " ", text)
+    text = re.sub(r"[ \t]+", " ", text)
+    return text.strip()
 
 
 def _ffmpeg_exe():
@@ -58,6 +61,32 @@ def _ffmpeg_exe():
         return "ffmpeg"
 
 
+def _ttsfree_key():
+    for name in ("ttsfree", "TTSFREE", "TTSFREE_API_KEY"):
+        if os.environ.get(name):
+            return os.environ[name]
+    raise RuntimeError(
+        "TTSFree apikey set nahi hai - repo secrets me 'ttsfree' naam se "
+        "key daalo (ttsfree.com -> Profile -> API Key)."
+    )
+
+
+def _concat_files(parts, out_path, reencode):
+    """Audio part files ko ffmpeg concat se jodo."""
+    list_file = Path(out_path).parent / "tts_parts.txt"
+    list_file.write_text(
+        "\n".join(f"file '{p}'" for p in parts), encoding="utf-8"
+    )
+    cmd = [_ffmpeg_exe(), "-y", "-f", "concat", "-safe", "0",
+           "-i", str(list_file)]
+    if reencode:
+        cmd += ["-c:a", "libmp3lame", "-q:a", "2"]
+    else:
+        cmd += ["-c", "copy"]
+    cmd += [str(out_path)]
+    subprocess.run(cmd, check=True, capture_output=True)
+
+
 def synthesize(text, tts_cfg, out_path):
     """Script ko audio file me convert karo. Output path return hota hai."""
     out_path = Path(out_path)
@@ -66,28 +95,108 @@ def synthesize(text, tts_cfg, out_path):
     if not text:
         raise RuntimeError("TTS ke liye script khali hai!")
 
-    provider = tts_cfg.get("provider", "indicf5")
+    provider = tts_cfg.get("provider", "ttsfree")
 
-    if provider == "indicf5":
-        try:
-            return _indicf5(text, tts_cfg.get("indicf5", {}), out_path)
-        except Exception as e:  # noqa: BLE001
-            print(f"WARNING: IndicF5 fail hua ({e})")
-            print("         Parler-TTS pe fallback (natural 'Aman' voice)...")
-        try:
-            return _parler(text, {}, out_path)
-        except Exception as e:  # noqa: BLE001
-            print(f"WARNING: Parler TTS bhi fail hua ({e})")
-            print("         edge-tts pe fallback (Madhur voice)...")
+    # fallback chain - jo provider config me hai wahi pehle try hota hai
+    if provider == "ttsfree":
+        chain = [
+            ("TTSFree", lambda: _ttsfree(text, tts_cfg.get("ttsfree", {}), out_path)),
+            ("IndicF5", lambda: _indicf5(text, tts_cfg.get("indicf5", {}), out_path)),
+            ("Parler", lambda: _parler(text, {}, out_path)),
+            ("edge-tts", lambda: _edge_tts(text, tts_cfg.get("edge_tts", {}), out_path)),
+        ]
+    elif provider == "indicf5":
+        chain = [
+            ("IndicF5", lambda: _indicf5(text, tts_cfg.get("indicf5", {}), out_path)),
+            ("Parler", lambda: _parler(text, {}, out_path)),
+            ("edge-tts", lambda: _edge_tts(text, tts_cfg.get("edge_tts", {}), out_path)),
+        ]
+    elif provider == "edge_tts":
         return _edge_tts(text, tts_cfg.get("edge_tts", {}), out_path)
-
-    if provider == "edge_tts":
-        return _edge_tts(text, tts_cfg.get("edge_tts", {}), out_path)
-    if provider == "custom_http":
+    elif provider == "custom_http":
         return _custom_http(text, tts_cfg.get("custom_http", {}), out_path)
-    if provider == "sarvam":
+    elif provider == "sarvam":
         return _sarvam(text, tts_cfg.get("sarvam", {}), out_path)
-    raise ValueError(f"Unknown TTS provider: {provider!r}")
+    else:
+        raise ValueError(f"Unknown TTS provider: {provider!r}")
+
+    last_err = None
+    for name, fn in chain:
+        try:
+            return fn()
+        except Exception as e:  # noqa: BLE001 - agla fallback
+            last_err = e
+            print(f"WARNING: {name} TTS fail hua ({str(e)[:200]})")
+            print(f"         agla fallback try kar rahe hain...")
+    raise RuntimeError(f"Saare TTS providers fail ho gaye: {last_err}")
+
+
+# ----------------------------------------------------------------------------
+# TTSFree.com - premium TTS API
+#
+# API: POST https://ttsfree.com/api/v1/tts
+#   headers: apikey: <key>  (secret 'ttsfree' me)
+#   body: {"text", "voiceService", "voiceID", "voiceSpeed", "voicePitch"}
+#   response: {"status": "success", "audioData": "<base64 mp3>"}
+# Max 500 chars/request isliye lambi script chunks me jaati hai.
+# Voice IDs: https://ttsfree.com/api/v1/voice (hi-IN = Madhur male,
+#   hi-IN2 = Swara female - config me badal sakte ho)
+# ----------------------------------------------------------------------------
+
+def _ttsfree(text, cfg, out_path):
+    """TTSFree.com API se Hindi voice banao."""
+    import base64
+
+    api_key = _ttsfree_key()
+    voice_service = cfg.get("voice_service", "servicebin")
+    voice_id = cfg.get("voice_id", "hi-IN")
+    speed = str(cfg.get("voice_speed", "0"))
+    pitch = str(cfg.get("voice_pitch", "0"))
+
+    # API max 500 chars per request leta hai
+    chunks = _split_script(text, max_chars=450)
+    parts = []
+    for i, chunk in enumerate(chunks):
+        print(f"  [ttsfree] chunk {i + 1}/{len(chunks)} generate ho raha hai...")
+        last_err = None
+        for attempt in range(1, 4):   # network hiccup pe 3 attempts
+            try:
+                resp = requests.post(
+                    "https://ttsfree.com/api/v1/tts",
+                    headers={
+                        "apikey": api_key,
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "text": chunk,
+                        "voiceService": voice_service,
+                        "voiceID": voice_id,
+                        "voiceSpeed": speed,
+                        "voicePitch": pitch,
+                    },
+                    timeout=120,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                if data.get("status") != "success" or not data.get("audioData"):
+                    raise RuntimeError(f"ttsfree response: {str(data)[:200]}")
+                part = out_path.parent / f"ttsfree_part{i}.mp3"
+                part.write_bytes(base64.b64decode(data["audioData"]))
+                if part.stat().st_size < 1000:
+                    raise RuntimeError("ttsfree audio bahut chhota aaya")
+                parts.append(part)
+                break
+            except Exception as e:  # noqa: BLE001
+                last_err = e
+                time.sleep(5 * attempt)
+        else:
+            raise RuntimeError(f"ttsfree chunk {i + 1} fail (3 attempts): {last_err}")
+
+    if len(parts) == 1:
+        shutil.copy(parts[0], out_path)
+        return out_path
+    _concat_files(parts, out_path, reencode=True)
+    return out_path
 
 
 # ----------------------------------------------------------------------------
@@ -118,7 +227,7 @@ INDICF5_VOICES = {
     # male voice
     "marathi_male_wiki": {
         "url": "https://github.com/AI4Bharat/IndicF5/raw/refs/heads/main/prompts/MAR_M_WIKI_00001.wav",
-        "ref_text": "\u092f\u093e \u092a\u094d\u0930\u0925\u093e\u0932\u093e \u090f\u0915\u094b\u0923\u0940\u0938\u0936\u0947 \u092a\u0902\u091a\u093e\u0924\u0930 \u0908\u0938\u0935\u0940 \u092a\u093e\u0938\u0942\u0928 \u092d\u093e\u0930\u0924\u0940\u092f \u0926\u0902\u0921 \u0938\u0902\u0939\u093f\u0924\u093e\u091a\u0940 \u0927\u093e\u0930\u093e \u091a\u093e\u0930\u0936\u0947 \u0905\u0920\u094d\u0920\u093e\u0935\u0940\u0938 \u0906\u0923\u093f \u091a\u093e\u0930\u0936\u0947 \u090f\u0915\u094b\u0923\u0924\u0940\u0938\u091a\u094d\u092f\u093e \u0905\u0928\u094d\u0924\u0930\u094d\u0917\u0924 \u0928\u093f\u0937\u0947\u0927 \u0915\u0947\u0932\u093e.",
+        "ref_text": "\u092f\u093e \u092a\u094d\u0930\u0925\u093e\u0932\u093e \u090f\u0915\u094b\u0923\u0940\u0938\u0936\u0947 \u092a\u0902\u091a\u093e\u0924\u0930 \u0908\u0938\u0935\u0940 \u092a\u093e\u0938\u0a02\u0928 \u092d\u093e\u0930\u0924\u0940\u092f \u0926\u0902\u0921 \u0938\u0902\u0939\u093f\u0924\u093e\u091a\u0940 \u0927\u093e\u0930\u093e \u091a\u093e\u0930\u0936\u0947 \u0905\u0920\u094d\u0920\u093e\u0935\u0940\u0938 \u0906\u0923\u093f \u091a\u093e\u0930\u0936\u0947 \u090f\u0915\u094b\u0923\u0924\u0940\u0938\u091a\u094d\u092f\u093e \u0905\u0928\u094d\u0924\u0930\u094d\u0917\u0924 \u0928\u093f\u0937\u0947\u0927 \u0915\u0947\u0932\u093e.",
     },
     # female, happy
     "kannada_female_happy": {
@@ -198,7 +307,7 @@ def _indicf5(text, cfg, out_path):
     chunks = _split_script(text)
 
     last_err = None
-    for space in [cfg.get("space")] + INDICF5_SPACES if cfg.get("space") else INDICF5_SPACES:
+    for space in INDICF5_SPACES:
         try:
             client = Client(space, token=os.environ.get("HF_TOKEN") or None)
 
@@ -220,17 +329,7 @@ def _indicf5(text, cfg, out_path):
             if len(parts) == 1:
                 shutil.copy(parts[0], out_wav)
                 return out_wav
-
-            # multiple chunks -> ffmpeg concat (same format, -c copy fast hai)
-            list_file = out_path.parent / "indicf5_parts.txt"
-            list_file.write_text(
-                "\n".join(f"file '{p.name}'" for p in parts), encoding="utf-8"
-            )
-            subprocess.run(
-                [_ffmpeg_exe(), "-y", "-f", "concat", "-safe", "0",
-                 "-i", str(list_file), "-c", "copy", str(out_wav)],
-                check=True, capture_output=True,
-            )
+            _concat_files(parts, out_wav, reencode=False)
             return out_wav
         except Exception as e:  # noqa: BLE001 - agla space try karo
             last_err = e
@@ -243,8 +342,6 @@ def _parler(text, cfg, out_path):
     """AI4Bharat Indic Parler-TTS via HuggingFace Space (FREE).
     IndicF5 down hone par iska fallback hai - natural 'Aman' voice.
     """
-    import shutil
-
     from gradio_client import Client
 
     space = cfg.get("space", "ai4bharat/indic-parler-tts")
