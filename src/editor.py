@@ -1,15 +1,17 @@
 """
-ffmpeg editor v3 - Hindi Short banata hai:
+ffmpeg editor v4 - Hindi Short banata hai:
 
-  1. Video ko 3:4 band me CROP karo (1080x1440) - upar-neeche WHITE canvas
-  2. Zoom/pan effect - ab zyada VISIBLE (default zoom 1.00 -> 1.28)
-  3. Color grade: saturation + contrast + BRIGHTNESS + SHARPNESS (unsharp)
-  4. Source video ka English caption WHITE PATTI se cover hota hai,
-     aur usi patti pe HINGLISH text dikhta hai (jo TTS bol raha hai,
-     time-synced chunks me)
-  5. Video thodi tez (speed) + voice loudness normalize
-  6. SLOW lo-fi style background music (ffmpeg synth - copyright free)
-  7. Original audio HATA ke sirf Hindi TTS voice
+  1. Video ko 3:4 band me CROP (1080x1440) - TOP se anchor, BOTTOM crop hota
+     hai (Zack D. Films ka English caption bottom pe hota hai - wahi kat jata
+     hai, upar ka content safe rehta hai)
+  2. Upar-neeche WHITE canvas (Instagram-style look)
+  3. Zoom/pan effect (zoom_amount se control)
+  4. Color grade: saturation + contrast + brightness
+  5. Sharpness (unsharp)
+  6. Video thodi tez + voice loudness normalize
+  7. Slow lo-fi background music (ffmpeg synth - copyright free)
+  8. Original audio HATA ke sirf Hindi TTS voice
+  9. KOI CAPTION/TEXT/PATTI NAHI - bilkul clean video
 """
 import json
 import re
@@ -20,12 +22,6 @@ from pathlib import Path
 TARGET_W, TARGET_H, FPS = 1080, 1920, 30
 BAND_W, BAND_H = 1080, 1440   # video band (3:4 crop) - iske upar/neeche white
 BIG_W, BIG_H = 2160, 2880     # zoom se pehle 2x upscale (quality ke liye)
-
-FONT_CANDIDATES = [
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-    "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf",
-]
 
 
 def _ffmpeg_exe():
@@ -100,34 +96,6 @@ def _zoompan(variant, total_frames, out_w, out_h, zoom_amount=0.28):
     )
 
 
-def _find_font():
-    for f in FONT_CANDIDATES:
-        if Path(f).exists():
-            return f
-    return None
-
-
-def _escape_drawtext(text):
-    """drawtext ke liye special characters escape karo."""
-    text = text.replace("\\", "\\\\")
-    text = text.replace(":", "\\:")
-    text = text.replace(",", "\\,")
-    text = text.replace("%", "\\%")
-    text = text.replace("'", "").replace('"', "")
-    return text
-
-
-def _caption_lines(caption):
-    """Lambi caption ko 2 lines me wrap karo (cut na ho)."""
-    caption = caption.strip()
-    if len(caption) <= 26 or " " not in caption:
-        return [caption]
-    mid = len(caption) // 2
-    spaces = [i for i, ch in enumerate(caption) if ch == " "]
-    split_at = min(spaces, key=lambda i: abs(i - mid))
-    return [caption[:split_at].strip(), caption[split_at:].strip()]
-
-
 def _slow_music_source():
     """Slow ambient pad (Am -> F -> C -> G, har chord 4 sec).
     Pure ffmpeg synth hai isliye 100% copyright-free.
@@ -155,40 +123,10 @@ def _slow_music_source():
     return f"aevalsrc='{expr}':s=44100"
 
 
-def _chunk_hinglish(text, max_words=4):
-    """Hinglish script ko chhote chunks me todo (screen pe readable)."""
-    words = [w for w in text.split() if w.strip()]
-    chunks, cur = [], []
-    for w in words:
-        cur.append(w)
-        if len(cur) >= max_words:
-            chunks.append(" ".join(cur))
-            cur = []
-    if cur:
-        chunks.append(" ".join(cur))
-    return chunks
-
-
-def _timed_chunks(chunks, total_s):
-    """Chunks ko audio duration me char-count ke hisaab se baanto."""
-    if not chunks or total_s <= 0:
-        return []
-    weights = [max(len(c), 6) for c in chunks]
-    total_w = sum(weights)
-    out, t = [], 0.0
-    for c, w in zip(chunks, weights):
-        d = total_s * w / total_w
-        out.append((c, t, t + d))
-        t += d
-    return out
-
-
-def edit_video(src, audio, out_path, variant, effects_cfg,
-               caption=None, hinglish=None):
+def edit_video(src, audio, out_path, variant, effects_cfg):
     """Source video + TTS audio se final 9:16 Short banao. Output path return."""
     src, audio, out_path = Path(src), Path(audio), Path(out_path)
     duration = get_duration(src)
-    audio_dur = get_duration(audio)
     speed = float(effects_cfg.get("video_speed", 1.12))
     bgm_volume = float(effects_cfg.get("bgm_volume", 0.10))
     zoom_amount = float(effects_cfg.get("zoom_amount", 0.28))
@@ -202,70 +140,22 @@ def edit_video(src, audio, out_path, variant, effects_cfg,
         f"setpts=PTS/{speed},"
         # 2. 2x upscale (zoom quality ke liye)
         f"scale={BIG_W}:{BIG_H}:force_original_aspect_ratio=increase:flags=lanczos,"
-        f"crop={BIG_W}:{BIG_H},"
+        # 3. CROP: TOP se anchor (y=0) - upar ka content safe, neeche ka
+        #    hissa (jahan English caption hota hai) kat jata hai
+        f"crop={BIG_W}:{BIG_H}:0:0,"
         f"fps={FPS},"
-        # 3. zoom / pan effect (ab zyada visible)
+        # 4. zoom / pan effect
         f"{_zoompan(variant, total_frames, BAND_W, BAND_H, zoom_amount)},"
-        # 4. color grade: vibrant + punchy + thoda bright
+        # 5. color grade: vibrant + punchy + thoda bright
         f"eq=saturation={effects_cfg.get('saturation', 1.28)}"
         f":contrast={effects_cfg.get('contrast', 1.12)}"
         f":brightness={effects_cfg.get('brightness', 0.04)},"
-        # 5. sharpness (crisp look)
+        # 6. sharpness (crisp look)
         f"unsharp=5:5:{effects_cfg.get('sharpen', 1.0)},"
-        # 6. white canvas (upar-neeche background)
+        # 7. white canvas (upar-neeche background)
         f"pad={TARGET_W}:{TARGET_H}:0:{pad_y}:white,"
         "setsar=1"
     )
-
-    # 7. ENGLISH CAPTION COVER - white patti video band ke center pe,
-    #    Zack D. Films style caption wahi hota hai
-    band_cfg = effects_cfg.get("caption_band", {}) or {}
-    band_y = pad_y + int(BAND_H * float(band_cfg.get("y", 0.30)))
-    band_h = int(BAND_H * float(band_cfg.get("height", 0.40)))
-    if band_cfg.get("enabled", True) and band_h > 0:
-        color = band_cfg.get("color", "white")
-        vf += f",drawbox=x=0:y={band_y}:w=iw:h={band_h}:color={color}:t=fill"
-
-    # 8. HOOK caption (top white band pe, bada bold text)
-    font = _find_font()
-    if caption and font:
-        cap = str(caption).strip()[:48]
-        lines = _caption_lines(cap)
-        n = len(lines)
-        for idx, line in enumerate(lines):
-            text = _escape_drawtext(line)
-            fontsize = 62 if len(line) <= 24 else (54 if len(line) <= 32 else 46)
-            if n == 1:
-                y = pad_y // 2 - fontsize // 2
-            else:
-                y = 38 + idx * (fontsize + 16)
-            vf += (
-                f",drawtext=fontfile={font}:text='{text}'"
-                f":fontcolor=black:fontsize={fontsize}"
-                f":x=(w-text_w)/2:y={y}"
-            )
-
-    # 9. HINGLISH TEXT patti ke upar - TTS jo bol raha hai, time-synced
-    if font and hinglish and str(hinglish).strip() and band_cfg.get("enabled", True):
-        chunks = _chunk_hinglish(
-            str(hinglish), int(band_cfg.get("words_per_line", 4))
-        )
-        show_dur = min(audio_dur, out_duration) if audio_dur > 0 else out_duration
-        band_center = band_y + band_h // 2
-        for text, t0, t1 in _timed_chunks(chunks, show_dur):
-            esc = _escape_drawtext(text)
-            fs = int(band_cfg.get("font_size", 64))
-            if len(text) > 20:
-                fs -= 8
-            if len(text) > 28:
-                fs -= 8
-            fs = max(fs, 34)
-            vf += (
-                f",drawtext=fontfile={font}:text='{esc}'"
-                f":fontcolor=black:fontsize={fs}"
-                f":x=(w-text_w)/2:y={band_center - fs // 2}"
-                f":enable='between(t,{t0:.2f},{t1:.2f})'"
-            )
 
     # ---- audio: voice (loudness normalize) + slow background music ----
     if bgm_volume > 0:
