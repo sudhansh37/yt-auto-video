@@ -59,6 +59,10 @@ def upload_video(video_path, title, description, tags, youtube_cfg):
         "status": {
             "privacyStatus": youtube_cfg.get("privacy", "public"),
             "selfDeclaredMadeForKids": False,
+            # YouTube Studio ka "AI use" disclosure (Attributes section) -
+            # upload ke waqt hi automatically Yes ho jata hai.
+            # Band karna ho to config.yaml me youtube.ai_disclosure: false
+            "containsSyntheticMedia": bool(youtube_cfg.get("ai_disclosure", True)),
         },
     }
     init_resp = requests.post(
