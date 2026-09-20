@@ -1,0 +1,88 @@
+# Watchdog - missed-slot catch-up system
+#
+# GitHub Actions ke crons kabhi-kabhi high load me DROP ho jaate hain.
+# Ye workflow har 30 minute me check karta hai:
+#   - aaj (IST) ke publish slots (08:15/11:00/13:45/16:30) me se koi miss
+#     hua? (data/publish_log.json se pata chalta hai)
+#   - haan -> pipeline chala kar video publish kar deta hai
+#   - nahi -> 10 second me no-op ke saath nikal jaata hai (heavy setup skip)
+#
+# NOTE: pehla step sirf stdlib use karta hai (koi pip install nahi), isliye
+# no-op runs bilkul sasti hain.
+
+name: watchdog
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"   # har 30 min (IST time internally check hota hai)
+  workflow_dispatch:
+
+permissions:
+  contents: write   # data/history.json + data/publish_log.json commit
+
+# daily.yml ke saath same group - kabhi parallel nahi chalenge
+concurrency:
+  group: publish-short
+  cancel-in-progress: false
+
+jobs:
+  check-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Quick check (koi slot miss hua? 10 sec)
+        id: check
+        run: |
+          if python src/watchdog.py --check-only; then
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Deno (yt-dlp ka JS runtime)
+        if: steps.check.outputs.needed == 'true'
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Install FFmpeg
+        if: steps.check.outputs.needed == 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+
+      - name: Install Python packages
+        if: steps.check.outputs.needed == 'true'
+        run: pip install --quiet -r requirements.txt
+
+      - name: Catch-up publish (missed slots)
+        if: steps.check.outputs.needed == 'true'
+        env:
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          YT_CLIENT_ID:        ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET:    ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN:    ${{ secrets.YT_REFRESH_TOKEN }}
+          YOUTUBE_COOKIES:     ${{ secrets.YOUTUBE_COOKIES }}
+          HF_TOKEN:            ${{ secrets.HF_TOKEN }}
+          ttsfree:             ${{ secrets.ttsfree }}
+          VOICE: hi-IN-MadhurNeural
+        run: python src/watchdog.py
+
+      - name: Save history + publish log
+        if: always() && steps.check.outputs.needed == 'true'
+        run: |
+          git config user.name  "shorts-bot"
+          git config user.email "action@github.com"
+          git add data/history.json data/publish_log.json
+          if git diff --cached --quiet; then
+            echo "No change - skip commit"
+          else
+            git commit -m "chore: watchdog catch-up [skip ci]"
+            git push
+          fi

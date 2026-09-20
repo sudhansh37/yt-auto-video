@@ -8,8 +8,9 @@ Hindi Shorts Bot - main pipeline
 5. ffmpeg: 9:16 crop (top safe, bottom se crop - English caption wahi rehta
    hai aur kat jata hai) + white canvas + zoom/pan + color grade + sharpness
    + slow background music. KOI CAPTION/TEXT NAHI.
-6. YouTube Data API se Short upload karo
+6. YouTube Data API se Short upload karo ("AI use" disclosure ke saath)
 7. history.json me video id save karo (isliye kabhi duplicate nahi)
+8. publish_log.json me time save karo (watchdog isse missed-slot check karta hai)
 
 Usage:
     python src/main.py           # default mode = mix
@@ -17,9 +18,12 @@ Usage:
     python src/main.py random    # koi bhi unused purani video
     python src/main.py mix       # 50% latest, 50% random purani
 """
+import json
 import random
 import sys
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import yaml
 
@@ -37,6 +41,28 @@ from uploader import upload_video             # noqa: E402
 def load_config():
     with open(ROOT / "config.yaml", encoding="utf-8") as f:
         return yaml.safe_load(f)
+
+
+def log_publish(yt_id):
+    """publish_log.json me aaj ki entry likho (watchdog ke liye).
+
+    watchdog har 30 min me isse padh kar check karta hai ki aaj ke
+    slots (08:15/11:00/13:45/16:30 IST) pe video publish hui ya nahi.
+    """
+    log_path = ROOT / "data" / "publish_log.json"
+    log_path.parent.mkdir(exist_ok=True)
+    try:
+        log = json.loads(log_path.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001 - file na ho / kharab ho
+        log = {"publishes": []}
+    now = datetime.now(ZoneInfo("Asia/Kolkata"))
+    log["publishes"].append({
+        "date": now.strftime("%Y-%m-%d"),
+        "time": now.strftime("%H:%M"),
+        "yt": yt_id,
+    })
+    log_path.write_text(json.dumps(log, ensure_ascii=False, indent=1),
+                        encoding="utf-8")
 
 
 def pick_video(ids, history, mode):
@@ -97,21 +123,22 @@ def main():
     out = edit_video(src, audio, work / "final.mp4", variant, cfg["effects"])
     print(f"Edit complete (effect={variant}) -> {out.name}")
 
-    # ---- 6. YouTube upload ----
+    # ---- 6. YouTube upload ("AI use" disclosure auto-on) ----
     title = analysis["title"]
     if "#shorts" not in title.lower():
         title = f"{title} #Shorts"
-    upload_video(
+    yt_id = upload_video(
         out, title, analysis["description"],
         cfg["youtube"].get("tags", []), cfg["youtube"],
     )
     print("YouTube pe upload ho gaya.")
 
-    # ---- 7. history save ----
+    # ---- 7. history + publish log save ----
     mark_used(history, video_id)
     trim_history(history, cfg["channel"]["max_history"])
     save_history(history)
-    print("History update ho gayi - ye video dobara use nahi hogi.")
+    log_publish(yt_id)
+    print("History + publish log update ho gayi - ye video dobara use nahi hogi.")
 
 
 if __name__ == "__main__":
