@@ -7,6 +7,8 @@
 #   04:30 PM IST = 11:00 UTC
 # TIME CHANGE KARNA HO TO niche cron lines edit karo (UTC me hota hai,
 # IST se 5 ghante 30 minute peeche).
+# NOTE: cron drop ho jaye to watchdog.yml (har 30 min) automatic catch-up
+# kar deta hai - usko disable mat karna.
 
 name: publish-short
 
@@ -68,14 +70,15 @@ jobs:
           VOICE: hi-IN-MadhurNeural
         run: python src/main.py "${{ github.event.inputs.mode || 'mix' }}"
 
-      - name: Save history (duplicates avoid)
+      - name: Save history + publish log
         run: |
           git config user.name  "shorts-bot"
           git config user.email "action@github.com"
-          git add data/history.json
+          git add data/history.json data/publish_log.json
           if git diff --cached --quiet; then
-            echo "No history change - skip commit"
+            echo "No change - skip commit"
           else
             git commit -m "chore: mark video as used [skip ci]"
+            git pull --rebase origin main
             git push
           fi

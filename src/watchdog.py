@@ -7,7 +7,7 @@ hain (kabhi 50+ min late bhi). Ye watchdog us problem ka ilaaj hai:
   - Har 30 minute (watchdog.yml ka cron) ye script check karti hai:
     aaj (IST) ke kaunse publish slots ka time nikal chuka hai?
       SLOTS = 08:15, 11:00, 13:45, 16:30 IST
-    aur unme se kitne cover ho chuke hain (data/publish_log.json se)?
+    aur unme se kitne cover ho chuke hain?
   - Jo slot GRACE_MIN (45 min) tak me bhi cover nahi hua - matlab
     scheduled run drop hua tha - watchdog wahi pipeline chala kar video
     publish kar deta hai.
@@ -15,9 +15,13 @@ hain (kabhi 50+ min late bhi). Ye watchdog us problem ka ilaaj hai:
     kar leta hai, isliye din me kahin bhi ek bhi watchdog run bach
     jaye to bhi videos publish ho hi jaati hain.
 
-Publish log main.py likhta hai (har upload ke baad):
-  data/publish_log.json = {"publishes": [{"date": "YYYY-MM-DD",
-                                          "time": "HH:MM", "yt": "<id>"}]}
+DOUBLE CHECK (over-publish se bachav):
+  - Primary check: data/publish_log.json (time-window ke saath precise)
+  - Secondary check: data/history.json me aaj kitni videos mark hui
+    (har run - daily bhi - ise commit karta hai, isliye ye hamesha
+    fresh rehta hai). Jo bhi count ZYADA dikhaye, wahi maana jata hai
+    (missing = dono me se minimum) - isliye kabhi duplicate publish
+    nahi hota chahe log commit fail bhi ho jaye.
 
 Usage:
     python src/watchdog.py               # check + zaroorat ho to publish
@@ -49,6 +53,27 @@ def _load_log():
         return []
 
 
+def _count_today_history(now):
+    """history.json me AAJ kitni videos mark hue hain?
+
+    Ye doosra (zyada reliable) source of truth hai - daily.yml ke scheduled
+    runs publish_log.json commit nahi kar sakte the purane bug me, lekin
+    history.json HAR run commit karta hai. Isliye agar koi video publish
+    ho chuki hai aur log me na dikhe, to yahan se count pakka milega.
+
+    NOTE: history UTC date likhti hai (runner UTC pe hota hai), isliye
+    IST ki aaj + UTC ki aaj - dono dates count karte hain.
+    """
+    path = ROOT / "data" / "history.json"
+    try:
+        history = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return 0
+    utc_today = datetime.now(ZoneInfo("UTC")).date().isoformat()
+    ist_today = now.date().isoformat()
+    return sum(1 for v in history.values() if v in (ist_today, utc_today))
+
+
 def check(now=None):
     """Kitne slots miss hue hain? (int) - negative kabhi nahi hota."""
     now = now or datetime.now(IST)
@@ -71,19 +96,25 @@ def check(now=None):
 
     # greedy assignment: k-i publish, k-i due slot ko cover karti hai
     # (publish us slot se >= EARLY_MIN pehle tak hi count hoti hai)
-    pi = covered = 0
+    pi = covered_log = 0
     for slot in due:
         while pi < len(pubs) and pubs[pi] < slot - timedelta(minutes=EARLY_MIN):
             pi += 1  # ye publish is slot se bahut purani hai - skip
         if pi < len(pubs):
-            covered += 1
+            covered_log += 1
             pi += 1
 
-    missing = len(due) - covered
+    # secondary source: history.json me aaj ki count (har run commit karta hai)
+    covered_hist = _count_today_history(now)
+
+    # dono me se jo zyada bataye, wahi final (duplicate se bachav)
+    covered = max(covered_log, covered_hist)
+    missing = max(0, len(due) - covered)
+
     print(
-        f"[watchdog] {now:%d %b %I:%M %p} IST | aaj {len(pubs)} video "
-        f"publish hui | {len(due)} slot due, {covered} covered, "
-        f"**{missing} missing**"
+        f"[watchdog] {now:%d %b %I:%M %p} IST | slots due: {len(due)} | "
+        f"log se covered: {covered_log} | history se aaj: {covered_hist} | "
+        f"final missing: **{missing}**"
     )
     return missing
 
