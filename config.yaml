@@ -91,3 +91,6 @@ youtube:
   privacy: "public"      # public / unlisted / private
   category_id: "27"      # 27 = Education
   tags: ["hindi facts", "shorts", "facts in hindi", "amazing facts", "viral facts"]
+  # "AI use" disclosure - upload ke waqt hi Studio ka AI toggle automatically
+  # Yes ho jata hai (containsSyntheticMedia). Band karna ho to false karo.
+  ai_disclosure: true
