@@ -8,10 +8,14 @@ manga jata hai: {"title", "description", "script"}
 
 CRASH FIX (503 "high demand" ke liye):
   - har model ke liye 4 attempts (beech me 15/30/60s wait)
-  - fail hone pe fallback models ki chain: flash models, phir 2.5-pro
+  - fail hone pe fallback models ki chain (flash + pro)
+  - 404 (model retired) par retry waste nahi karte - seedha agla model
   - poora din Gemini down rahe to run fail hota hai, lekin watchdog har
     30 min me khud dobara try karta rehta hai - video der se sahi publish
     ho jaati hai
+
+NOTE (Sep 2026): gemini-2.5-flash / 2.5-pro retire ho chuke hain (404).
+Ab fallback chain: 3.6-flash -> flash-latest -> 3.5-flash -> 3.1-pro-preview.
 """
 import json
 import os
@@ -50,8 +54,7 @@ FALLBACK_MODELS = [
     "gemini-3.6-flash",
     "gemini-flash-latest",
     "gemini-3.5-flash",
-    "gemini-2.5-flash",
-    "gemini-2.5-pro",
+    "gemini-3.1-pro-preview",
 ]
 
 # har model ke attempts ke beech ka wait (seconds) - exponential
@@ -62,6 +65,16 @@ def _validate(analysis):
     for key in ("title", "description", "script"):
         if key not in analysis or not str(analysis[key]).strip():
             raise ValueError(f"Gemini response me '{key}' missing/khali hai.")
+
+
+def _is_permanent_error(err_str):
+    """404 (model retired) / invalid key - in par retry bekar hai."""
+    return (
+        "404" in err_str
+        or "NOT_FOUND" in err_str
+        or "not available" in err_str
+        or "API key not valid" in err_str
+    )
 
 
 def analyze_video(video_path, duration_s, gemini_cfg):
@@ -104,11 +117,16 @@ def analyze_video(video_path, duration_s, gemini_cfg):
                 return analysis
             except Exception as e:  # noqa: BLE001 - retry chain
                 last_err = e
+                # 404/retired model par retry waste hai - agla model
+                if _is_permanent_error(str(e)):
+                    print(f"  {model} available nahi hai - agla fallback model...")
+                    break
                 wait = ATTEMPT_WAITS[min(attempt - 1, len(ATTEMPT_WAITS) - 1)]
                 print(f"  WARNING: Gemini {model} attempt {attempt} fail: {e}")
                 print(f"           {wait}s wait karke retry...")
                 time.sleep(wait)
-        print(f"  {model} bhi fail - agla fallback model try karte hain...")
+        else:
+            print(f"  {model} bhi fail - agla fallback model try karte hain...")
 
     raise RuntimeError(
         f"Gemini analysis fail hua (sab models/moves try ho gaye): {last_err}"
