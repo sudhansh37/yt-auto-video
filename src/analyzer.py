@@ -4,11 +4,14 @@ Gemini video analysis -> Hindi narration script + title + description.
 Video Gemini Files API se upload hoti hai, phir model se JSON response
 manga jata hai: {"title", "description", "script"}
  - script   : Devanagari Hindi, video ki duration se match (TTS bolti hai)
+              aur editor isi se time-synced captions banata hai
 
-CRASH FIX: Gemini kabhi kabhi 503 "high demand" deta hai (temporary).
-Isliye ab:
-  - har model ke liye 3 attempts (beech me wait)
-  - fail hone pe fallback models ki chain try hoti hai
+CRASH FIX (503 "high demand" ke liye):
+  - har model ke liye 4 attempts (beech me 15/30/60s wait)
+  - fail hone pe fallback models ki chain: flash models, phir 2.5-pro
+  - poora din Gemini down rahe to run fail hota hai, lekin watchdog har
+    30 min me khud dobara try karta rehta hai - video der se sahi publish
+    ho jaati hai
 """
 import json
 import os
@@ -42,12 +45,17 @@ Return ONLY a JSON object with exactly these keys:
 """
 
 # 503 "high demand" fail hone pe ye fallback models try hote hain
+# (pehle saare flash - fast/cheap, aakhir me pro - slow lekin available)
 FALLBACK_MODELS = [
     "gemini-3.6-flash",
     "gemini-flash-latest",
     "gemini-3.5-flash",
     "gemini-2.5-flash",
+    "gemini-2.5-pro",
 ]
+
+# har model ke attempts ke beech ka wait (seconds) - exponential
+ATTEMPT_WAITS = [15, 30, 60]
 
 
 def _validate(analysis):
@@ -80,7 +88,7 @@ def analyze_video(video_path, duration_s, gemini_cfg):
 
     last_err = None
     for model in models:
-        for attempt in range(1, 4):   # har model ke 3 attempts
+        for attempt in range(1, len(ATTEMPT_WAITS) + 2):   # 4 attempts
             try:
                 resp = client.models.generate_content(
                     model=model,
@@ -96,8 +104,8 @@ def analyze_video(video_path, duration_s, gemini_cfg):
                 return analysis
             except Exception as e:  # noqa: BLE001 - retry chain
                 last_err = e
-                wait = 15 * attempt
-                print(f"  WARNING: Gemini {model} attempt {attempt}/3 fail: {e}")
+                wait = ATTEMPT_WAITS[min(attempt - 1, len(ATTEMPT_WAITS) - 1)]
+                print(f"  WARNING: Gemini {model} attempt {attempt} fail: {e}")
                 print(f"           {wait}s wait karke retry...")
                 time.sleep(wait)
         print(f"  {model} bhi fail - agla fallback model try karte hain...")

@@ -1,10 +1,8 @@
 # Hindi Shorts Bot - scheduled publisher (Zack D. Films -> Hindi Shorts)
 #
-# Din me 4 baar publish (subah 8 baje se shaam 5 baje ke beech):
-#   08:15 AM IST = 02:45 UTC
-#   11:00 AM IST = 05:30 UTC
-#   01:45 PM IST = 08:15 UTC
-#   04:30 PM IST = 11:00 UTC
+# Din me SIRF 2 videos:
+#   10:00 AM IST = 04:30 UTC
+#   03:00 PM IST = 09:30 UTC
 # TIME CHANGE KARNA HO TO niche cron lines edit karo (UTC me hota hai,
 # IST se 5 ghante 30 minute peeche).
 # NOTE: cron drop ho jaye to watchdog.yml (har 30 min) automatic catch-up
@@ -14,10 +12,8 @@ name: publish-short
 
 on:
   schedule:
-    - cron: "45 2 * * *"     # 08:15 AM IST
-    - cron: "30 5 * * *"     # 11:00 AM IST
-    - cron: "15 8 * * *"     # 01:45 PM IST
-    - cron: "0 11 * * *"     # 04:30 PM IST
+    - cron: "30 4 * * *"     # 10:00 AM IST
+    - cron: "30 9 * * *"     # 03:00 PM IST
   workflow_dispatch:          # repo -> Actions -> manual "Run workflow" button bhi
     inputs:
       mode:
@@ -28,7 +24,7 @@ on:
         options: [mix, latest, random]
 
 permissions:
-  contents: write   # data/history.json commit karne ke liye
+  contents: write   # data/history.json + publish_log.json commit karne ke liye
 
 concurrency:
   group: publish-short
@@ -50,10 +46,10 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Install FFmpeg
+      - name: Install FFmpeg + Devanagari fonts (captions ke liye)
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg
+          sudo apt-get install -y -qq ffmpeg fonts-noto-core
 
       - name: Install Python packages
         run: pip install --quiet -r requirements.txt

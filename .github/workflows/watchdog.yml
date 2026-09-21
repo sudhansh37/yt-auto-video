@@ -2,10 +2,12 @@
 #
 # GitHub Actions ke crons kabhi-kabhi high load me DROP ho jaate hain.
 # Ye workflow har 30 minute me check karta hai:
-#   - aaj (IST) ke publish slots (08:15/11:00/13:45/16:30) me se koi miss
-#     hua? (data/publish_log.json + data/history.json dono se confirm)
+#   - aaj (IST) ke publish slots (10:00 / 15:00) me se koi miss hua?
+#     (data/publish_log.json + data/history.json dono se confirm)
 #   - haan -> pipeline chala kar video publish kar deta hai
 #   - nahi -> 10 second me no-op ke saath nikal jaata hai (heavy setup skip)
+#   - pipeline fail ho (jaise Gemini 503) -> crash nahi karta, agli run
+#     me 30 min baad dobara try karta hai
 #
 # NOTE: pehla step sirf stdlib use karta hai (koi pip install nahi), isliye
 # no-op runs bilkul sasti hain.
@@ -51,11 +53,11 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Install FFmpeg
+      - name: Install FFmpeg + Devanagari fonts (captions ke liye)
         if: steps.check.outputs.needed == 'true'
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg
+          sudo apt-get install -y -qq ffmpeg fonts-noto-core
 
       - name: Install Python packages
         if: steps.check.outputs.needed == 'true'

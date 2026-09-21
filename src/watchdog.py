@@ -6,14 +6,11 @@ hain (kabhi 50+ min late bhi). Ye watchdog us problem ka ilaaj hai:
 
   - Har 30 minute (watchdog.yml ka cron) ye script check karti hai:
     aaj (IST) ke kaunse publish slots ka time nikal chuka hai?
-      SLOTS = 08:15, 11:00, 13:45, 16:30 IST
+      SLOTS = 10:00, 15:00 IST  (din me 2 videos)
     aur unme se kitne cover ho chuke hain?
   - Jo slot GRACE_MIN (45 min) tak me bhi cover nahi hua - matlab
     scheduled run drop hua tha - watchdog wahi pipeline chala kar video
     publish kar deta hai.
-  - Ek hi chalu watchdog run SAARE missing slots ek-ek karke catch-up
-    kar leta hai, isliye din me kahin bhi ek bhi watchdog run bach
-    jaye to bhi videos publish ho hi jaati hain.
 
 DOUBLE CHECK (over-publish se bachav):
   - Primary check: data/publish_log.json (time-window ke saath precise)
@@ -22,6 +19,12 @@ DOUBLE CHECK (over-publish se bachav):
     fresh rehta hai). Jo bhi count ZYADA dikhaye, wahi maana jata hai
     (missing = dono me se minimum) - isliye kabhi duplicate publish
     nahi hota chahe log commit fail bhi ho jaye.
+
+FAIL-SOFT (Gemini outage aadi):
+  - catch-up publish fail ho (jaise Gemini 503) to watchdog CRASH nahi
+    karta - sirf warning dekar nikal jaata hai, aur agli run (30 min
+    baad) me dobara try karta hai. Din me jab bhi Gemini wapas aayega,
+    videos automatic publish ho jayengi.
 
 Usage:
     python src/watchdog.py               # check + zaroorat ho to publish
@@ -39,7 +42,7 @@ ROOT = Path(__file__).resolve().parent.parent
 IST = ZoneInfo("Asia/Kolkata")
 
 # din ke publish slots (IST) - daily.yml ke crons se match karte hain
-SLOTS = ["08:15", "11:00", "13:45", "16:30"]
+SLOTS = ["10:00", "15:00"]
 GRACE_MIN = 45   # slot ke itne min baad tak video aani chahiye
 EARLY_MIN = 5    # slot se thoda pehle wali video bhi cover maan li jaati hai
 
@@ -56,10 +59,9 @@ def _load_log():
 def _count_today_history(now):
     """history.json me AAJ kitni videos mark hue hain?
 
-    Ye doosra (zyada reliable) source of truth hai - daily.yml ke scheduled
-    runs publish_log.json commit nahi kar sakte the purane bug me, lekin
-    history.json HAR run commit karta hai. Isliye agar koi video publish
-    ho chuki hai aur log me na dikhe, to yahan se count pakka milega.
+    Ye doosra (zyada reliable) source of truth hai - har run history.json
+    commit karta hai. Isliye agar koi video publish ho chuki hai aur log me
+    na dikhe, to yahan se count pakka milega.
 
     NOTE: history UTC date likhti hai (runner UTC pe hota hai), isliye
     IST ki aaj + UTC ki aaj - dono dates count karte hain.
@@ -120,13 +122,25 @@ def check(now=None):
 
 
 def publish_catchup(missing):
-    """Missing slots ke liye ek-ek karke pipeline chalao."""
+    """Missing slots ke liye ek-ek karke pipeline chalao (fail-soft).
+
+    Koi bhi run fail ho (jaise Gemini 503 outage) to crash nahi karte -
+    agli watchdog run (30 min baad) dobara try karegi.
+    """
+    ok = 0
     for i in range(missing):
         print(f"[watchdog] catch-up publish {i + 1}/{missing} chala raha hoon...")
-        subprocess.run(
+        r = subprocess.run(
             [sys.executable, str(ROOT / "src" / "main.py"), "mix"],
-            check=True,
+            check=False,   # fail-soft: crash nahi, agli run me retry
         )
+        if r.returncode == 0:
+            ok += 1
+        else:
+            print(f"[watchdog] WARNING: publish {i + 1}/{missing} fail hua "
+                  f"(exit {r.returncode}) - agli watchdog run (30 min baad) "
+                  f"me dobara try hoga.")
+    return ok
 
 
 def main(check_only=False):
@@ -137,8 +151,11 @@ def main(check_only=False):
     if check_only:
         print(f"[watchdog] {missing} slot miss hua hai - publish ki zaroorat hai.")
         sys.exit(0)
-    publish_catchup(missing)
-    print("[watchdog] catch-up complete.")
+    ok = publish_catchup(missing)
+    if ok < missing:
+        print(f"[watchdog] {missing - ok} publish baaki hai - 30 min me retry hoga.")
+    else:
+        print("[watchdog] catch-up complete.")
     sys.exit(0)
 
 

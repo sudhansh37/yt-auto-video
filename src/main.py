@@ -5,9 +5,9 @@ Hindi Shorts Bot - main pipeline
 2. yt-dlp se download karo (full HD vertical)
 3. Gemini se video analysis -> Hindi script + title + description
 4. TTS se Hindi voice banao (Gemini TTS; fail hone pe fallback chain)
-5. ffmpeg: 9:16 crop (top safe, bottom se crop - English caption wahi rehta
-   hai aur kat jata hai) + white canvas + zoom/pan + color grade + sharpness
-   + slow background music. KOI CAPTION/TEXT NAHI.
+5. ffmpeg: 9:16 crop (top safe, bottom se crop) + white canvas + zoom/pan
+   + color grade + sharpness + slow background music + TIME-SYNCED
+   DEVENAGARI CAPTIONS (model ke script se - jo voice bolti hai wahi dikhta hai)
 6. YouTube Data API se Short upload karo ("AI use" disclosure ke saath)
 7. history.json me video id save karo (isliye kabhi duplicate nahi)
 8. publish_log.json me time save karo (watchdog isse missed-slot check karta hai)
@@ -47,7 +47,7 @@ def log_publish(yt_id):
     """publish_log.json me aaj ki entry likho (watchdog ke liye).
 
     watchdog har 30 min me isse padh kar check karta hai ki aaj ke
-    slots (08:15/11:00/13:45/16:30 IST) pe video publish hui ya nahi.
+    slots (10:00 / 15:00 IST) pe video publish hui ya nahi.
     """
     log_path = ROOT / "data" / "publish_log.json"
     log_path.parent.mkdir(exist_ok=True)
@@ -118,10 +118,11 @@ def main():
     audio = synthesize(analysis["script"], cfg["tts"], work / "voice.mp3")
     print(f"Hindi voice ready: {audio.name}")
 
-    # ---- 5. edit: crop (bottom se) + effects + music ----
+    # ---- 5. edit: crop + effects + music + CAPTIONS ----
     variant = random.choice(cfg["effects"]["variants"])
-    out = edit_video(src, audio, work / "final.mp4", variant, cfg["effects"])
-    print(f"Edit complete (effect={variant}) -> {out.name}")
+    out = edit_video(src, audio, work / "final.mp4", variant, cfg["effects"],
+                     script=analysis["script"])
+    print(f"Edit complete (effect={variant}, captions=on) -> {out.name}")
 
     # ---- 6. YouTube upload ("AI use" disclosure auto-on) ----
     title = analysis["title"]
