@@ -6,10 +6,12 @@ manga jata hai: {"title", "description", "script"}
  - script   : Devanagari Hindi, video ki duration se match (TTS bolti hai)
               aur editor isi se time-synced captions banata hai
 
-CRASH FIX (503 "high demand" ke liye):
+CRASH FIX (503 "high demand" / 429 "quota" ke liye):
   - har model ke liye 4 attempts (beech me 15/30/60s wait)
   - fail hone pe fallback models ki chain (flash + pro)
   - 404 (model retired) par retry waste nahi karte - seedha agla model
+  - 429 "PerDay" (daily quota khatam) par bhi retry bekar - agla model
+    (free tier me har model ke 20 requests/din hote hain)
   - poora din Gemini down rahe to run fail hota hai, lekin watchdog har
     30 min me khud dobara try karta rehta hai - video der se sahi publish
     ho jaati hai
@@ -117,9 +119,15 @@ def analyze_video(video_path, duration_s, gemini_cfg):
                 return analysis
             except Exception as e:  # noqa: BLE001 - retry chain
                 last_err = e
+                err_str = str(e)
                 # 404/retired model par retry waste hai - agla model
-                if _is_permanent_error(str(e)):
+                if _is_permanent_error(err_str):
                     print(f"  {model} available nahi hai - agla fallback model...")
+                    break
+                # DAILY quota khatam (PerDay) - aaj is model par retry
+                # bekar hai, seedha agla model try karo
+                if "RESOURCE_EXHAUSTED" in err_str and "PerDay" in err_str:
+                    print(f"  {model} ka DAILY quota khatam - agla fallback model...")
                     break
                 wait = ATTEMPT_WAITS[min(attempt - 1, len(ATTEMPT_WAITS) - 1)]
                 print(f"  WARNING: Gemini {model} attempt {attempt} fail: {e}")
