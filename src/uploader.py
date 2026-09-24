@@ -3,13 +3,22 @@
 Ye repo ke pehle se lage secrets use karta hai:
   YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN
 (purane youtube_upload.py wala proven approach - wahi resumable upload).
+
+DAILY CAP (over-upload se bachav):
+  count_today_uploads() YouTube se hi poochta hai ki aaj (IST) channel
+  pe kitni videos upload ho chuki hain. Ye git/publish_log se INDEPENDENT
+  hai, isliye chahe log commit fail ho ya run kill ho jaye - duplicate
+  upload ROKA ja sakta hai.
 """
 import os
+from datetime import datetime, time
+from zoneinfo import ZoneInfo
 
 import requests
 
 API_BASE = "https://www.googleapis.com"
 UPLOAD_URL = "https://www.googleapis.com/upload/youtube/v3/videos"
+IST = ZoneInfo("Asia/Kolkata")
 
 
 def _get_env(name):
@@ -37,6 +46,59 @@ def _refresh_access_token():
     if resp.status_code != 200:
         raise RuntimeError(f"Token refresh error {resp.status_code}: {resp.text[:300]}")
     return resp.json()["access_token"]
+
+
+def count_today_uploads(max_pages=4):
+    """AAJ (IST) kitni videos channel pe upload ho chuki hain? (int)
+
+    YouTube search API (forMine=true, order=date) se latest videos leta
+    hai aur aaj ki IST date wali entries ginta hai. Ye SABSE reliable
+    source of truth hai - publish_log.json commit fail ho jaye tab bhi
+    duplicate upload nahi hoga.
+    """
+    token = _refresh_access_token()
+    today = datetime.now(IST).date()
+    start_of_day = datetime.combine(today, time.min, IST)
+    # RFC 3339: 2026-09-24T00:00:00+05:30
+    published_after = start_of_day.isoformat()
+
+    count = 0
+    page_token = None
+    for _ in range(max_pages):
+        params = {
+            "part": "snippet",
+            "forMine": "true",
+            "type": "video",
+            "order": "date",
+            "maxResults": 50,
+            "publishedAfter": published_after,
+        }
+        if page_token:
+            params["pageToken"] = page_token
+        resp = requests.get(
+            f"{API_BASE}/youtube/v3/search",
+            headers={"Authorization": f"Bearer {token}"},
+            params=params,
+            timeout=30,
+        )
+        if resp.status_code != 200:
+            raise RuntimeError(
+                f"YouTube search error {resp.status_code}: {resp.text[:300]}"
+            )
+        data = resp.json()
+        for item in data.get("items", []):
+            try:
+                published = datetime.fromisoformat(
+                    item["snippet"]["publishedAt"].replace("Z", "+00:00")
+                ).astimezone(IST)
+            except (KeyError, ValueError):
+                continue
+            if published.date() == today:
+                count += 1
+        page_token = data.get("nextPageToken")
+        if not page_token:
+            break
+    return count
 
 
 def upload_video(video_path, title, description, tags, youtube_cfg):

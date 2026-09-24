@@ -68,9 +68,9 @@ tts:
 
 # ---------------- Video editing ----------------
 effects:
-  variants: [zoom_in, zoom_out, pan_up, pan_down, ken_burns]
+  variants: [zoom_in, pan_up, pan_down, pan_left, pan_right, ken_burns]
   # Zoom/pan kitna strong ho (0.15 = halka, 0.28 = clearly visible, 0.40 = bahut zyada)
-  zoom_amount: 0.28
+  zoom_amount: 0.30
   # Color grade
   saturation: 1.28     # vibrant colors
   contrast: 1.12       # punchy blacks
@@ -83,8 +83,13 @@ effects:
 
 # NOTE: crop TOP se anchor hota hai (upar ka content safe, bottom ka hissa
 # jahan English caption hota hai wo kat jata hai). Video band 3:4 (1080x1440)
-# rehta hai, upar-neeche white canvas - Instagram-style look. Koi text/caption
-# add NAHI hota.
+# rehta hai, upar-neeche white canvas - Instagram-style look.
+
+# ---------------- On-screen captions ----------------
+captions:
+  # "hinglish"  -> captions Roman letters me (jaise "aap dekh sakte hain")
+  # "devanagari" -> captions Devanagari (Hindi) me
+  language: "hinglish"
 
 # ---------------- YouTube upload ----------------
 youtube:

@@ -33,7 +33,9 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # 55 min: run beech me kill ho to upload ke baad log likhne ka mauka
+    # hi nahi milta (wahi duplicate uploads ka reason tha)
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
 
@@ -46,10 +48,10 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Install FFmpeg + Devanagari fonts (captions ke liye)
+      - name: Install FFmpeg + fonts (captions ke liye)
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg fonts-noto-core
+          sudo apt-get install -y -qq ffmpeg fonts-noto-core fonts-dejavu-core
 
       - name: Install Python packages
         run: pip install --quiet -r requirements.txt
@@ -67,6 +69,10 @@ jobs:
         run: python src/main.py "${{ github.event.inputs.mode || 'mix' }}"
 
       - name: Save history + publish log
+        # always() = pipeline fail/retry ho tab bhi jitna data bana hai
+        # (history, pending log entry) wo commit ho jaye - warna watchdog
+        # slot ko miss samajh kar DUPLICATE upload kar deta tha
+        if: always()
         run: |
           git config user.name  "shorts-bot"
           git config user.email "action@github.com"

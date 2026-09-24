@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write   # data/history.json + data/publish_log.json commit
+  contents: write   # data/history.json + publish_log.json commit
 
 # daily.yml ke saath same group - kabhi parallel nahi chalenge
 concurrency:
@@ -30,7 +30,9 @@ concurrency:
 jobs:
   check-and-publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # 55 min: run beech me kill ho to upload ke baad log likhne ka mauka
+    # hi nahi milta (wahi duplicate uploads ka reason tha)
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
 
@@ -53,11 +55,11 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Install FFmpeg + Devanagari fonts (captions ke liye)
+      - name: Install FFmpeg + fonts (captions ke liye)
         if: steps.check.outputs.needed == 'true'
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg fonts-noto-core
+          sudo apt-get install -y -qq ffmpeg fonts-noto-core fonts-dejavu-core
 
       - name: Install Python packages
         if: steps.check.outputs.needed == 'true'

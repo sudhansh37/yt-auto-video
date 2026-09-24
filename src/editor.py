@@ -11,12 +11,15 @@ ffmpeg editor v5 - Hindi Short banata hai:
   6. Video thodi tez + voice loudness normalize
   7. Slow lo-fi background music (ffmpeg synth - copyright free)
   8. Original audio HATA ke sirf Hindi TTS voice
-  9. TIME-SYNCED DEVENAGARI CAPTIONS - jo script Gemini likhta hai (jo voice
-     bolti hai) wahi text video pe bottom me white-on-black dikhta hai
+  9. TIME-SYNCED HINGLISH CAPTIONS - jo script Gemini likhta hai (jo voice
+     bolti hai) wahi text video pe bottom me white-on-black dikhta hai.
+     Captions HINGLISH (Roman letters) me hoti hain - Devanagari text aaye
+     to Devanagari font automatically use hota hai.
 
 Captions ka style: neeche wali strip me white text + halka kaala box
-(subtitle style). Font: Noto Sans Devanagari Bold (CI pe fonts-noto-core
-package se aata hai). Har chunk apne time-window me dikhta hai.
+(subtitle style). Hinglish ke liye DejaVu Sans Bold, Devanagari ke liye
+Noto Sans Devanagari Bold (CI pe fonts-noto-core package se aata hai).
+Har chunk apne time-window me dikhta hai.
 """
 import json
 import re
@@ -33,6 +36,14 @@ CAPTION_FONT_CANDIDATES = [
     "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Bold.ttf",
     "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Regular.ttf",
     "/usr/share/fonts/truetype/lohit-devanagari/Lohit-Devanagari.ttf",
+]
+
+# HINGLISH (Roman letters) captions ke liye Latin fonts
+LATIN_FONT_CANDIDATES = [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf",
+    "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
 ]
 
 
@@ -82,23 +93,44 @@ def get_duration(path):
     return _parse_duration_from_stderr(result.stderr)
 
 
-def _find_caption_font():
-    """Devanagari font dhoondo (captions ke liye)."""
-    for f in CAPTION_FONT_CANDIDATES:
+def _has_devanagari(text):
+    """Text me Devanagari letters hain? (Hinglish -> False, Hindi -> True)"""
+    return any("\u0900" <= ch <= "\u097F" for ch in text)
+
+
+def _find_caption_font(caption_text=""):
+    """Caption text ke hisaab se font dhoondo.
+
+    HINGLISH (Roman letters) -> DejaVu/Noto Sans Bold (Latin font)
+    Devanagari             -> Noto Sans Devanagari Bold
+    """
+    deva = _has_devanagari(caption_text)
+    candidates = CAPTION_FONT_CANDIDATES if deva else LATIN_FONT_CANDIDATES
+    for f in candidates:
         if Path(f).exists():
             return f
     # glob fallback
     import glob
-    for pat in ("/usr/share/fonts/**/NotoSansDevanagari*.ttf",
-                "/usr/share/fonts/**/*Devanagari*.ttf"):
+    if deva:
+        pats = ("/usr/share/fonts/**/NotoSansDevanagari*.ttf",
+                "/usr/share/fonts/**/*Devanagari*.ttf")
+    else:
+        pats = ("/usr/share/fonts/**/DejaVuSans-Bold.ttf",
+                "/usr/share/fonts/**/NotoSans-Bold.ttf",
+                "/usr/share/fonts/**/*Sans*Bold*.ttf",
+                "/usr/share/fonts/**/DejaVu*.ttf")
+    for pat in pats:
         hits = sorted(glob.glob(pat, recursive=True))
         if hits:
             return hits[0]
-    return CAPTION_FONT_CANDIDATES[0]
+    return candidates[0]
 
 
 def _caption_chunks(script, max_words=4, max_chars=26):
     """Script ko chhote caption chunks me todo (4 shabd / 26 chars tak)."""
+    # Hinglish (Latin) me letters lambe hote hain - thoda wide chunk chalega
+    if not _has_devanagari(script):
+        max_chars = 32
     words = [w for w in script.split() if w.strip()]
     chunks, cur = [], []
     for w in words:
@@ -117,7 +149,7 @@ def _caption_filters(chunks, total_dur, workdir, y_pos):
     Har chunk ko uske char-length ke proportion me time-window milta hai,
     isliye caption voice ke saath-saath chalti hai.
     """
-    font = _find_caption_font()
+    font = _find_caption_font("".join(chunks))
     total_chars = sum(len(c) for c in chunks) or 1
     filters = []
     t = 0.0
@@ -152,6 +184,10 @@ def _zoompan(variant, total_frames, out_w, out_h, zoom_amount=0.28):
         z, x, y = f"{zmax}", cx, f"(ih-ih/zoom)*(1-on/{n})"
     elif variant == "pan_down":
         z, x, y = f"{zmax}", cx, f"(ih-ih/zoom)*(on/{n})"
+    elif variant == "pan_left":
+        z, x, y = f"{zmax}", f"(iw-iw/zoom)*(1-on/{n})", cy
+    elif variant == "pan_right":
+        z, x, y = f"{zmax}", f"(iw-iw/zoom)*(on/{n})", cy
     elif variant == "ken_burns":
         z, x, y = f"min(1+{zoom_amount}*on/{n},{zmax})", f"(iw-iw/zoom)*(on/{n})", cy
     else:
@@ -193,8 +229,9 @@ def _slow_music_source():
 def edit_video(src, audio, out_path, variant, effects_cfg, script=None):
     """Source video + TTS audio se final 9:16 Short banao. Output path return.
 
-    script diya to time-synced Devanagari captions bhi lagti hain
-    (jo voice bolti hai wahi text video pe dikhta hai).
+    script diya to time-synced captions bhi lagti hain (Hinglish ya
+    Devanagari - text ke hisaab se font khud choose hota hai). Jo voice
+    bolti hai wahi text video pe dikhta hai.
     """
     src, audio, out_path = Path(src), Path(audio), Path(out_path)
     duration = get_duration(src)
@@ -228,7 +265,7 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None):
         f"pad={TARGET_W}:{TARGET_H}:0:{pad_y}:white,"
     )
 
-    # 8. time-synced Devanagari captions (model ke script se)
+    # 8. time-synced captions (Hinglish ya Devanagari - font auto)
     if script:
         chunks = _caption_chunks(script)
         # caption neeche wali strip me - band ke andar (band: 240..1680)

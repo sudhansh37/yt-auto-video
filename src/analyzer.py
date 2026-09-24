@@ -5,6 +5,9 @@ Video Gemini Files API se upload hoti hai, phir model se JSON response
 manga jata hai: {"title", "description", "script"}
  - script   : Devanagari Hindi, video ki duration se match (TTS bolti hai)
               aur editor isi se time-synced captions banata hai
+ - captions : wahi script ka HINGLISH (Roman letters) version - isse
+              on-screen captions banti hain (Devanagari nahi). Model
+              na de to editor script par fallback kar deta hai.
 
 CRASH FIX (503 "high demand" / 429 "quota" ke liye):
   - har model ke liye 4 attempts (beech me 15/30/60s wait)
@@ -46,7 +49,8 @@ Return ONLY a JSON object with exactly these keys:
 {{
   "title": "catchy Hindi title (Devanagari), max 90 characters",
   "description": "2-3 line Hindi description (Devanagari) + neeche 8-10 hashtags mix karo: #shorts #facts #viral #hindifacts #amazingfacts ke saath video ke topic ke 4-5 specific hashtags",
-  "script": "poora Hindi narration script, Devanagari me"
+  "script": "poora Hindi narration script, Devanagari me",
+  "captions": "Wahi script ka HINGLISH version - Latin/Roman letters me likha hua (jaise: 'yeh dekho kya ho raha hai', 'aap yeh dekh sakte hain'). Sirf Latin letters use karo, Devanagari letters BILKUL NAHI. Same words, same order - bas script ko Roman me likha hua. Ye on-screen captions ke liye hai."
 }}
 """
 
@@ -67,6 +71,10 @@ def _validate(analysis):
     for key in ("title", "description", "script"):
         if key not in analysis or not str(analysis[key]).strip():
             raise ValueError(f"Gemini response me '{key}' missing/khali hai.")
+    # 'captions' (Hinglish) optional hai - na mile to editor Devanagari
+    # script par fallback kar dega, run fail nahi hota.
+    if not str(analysis.get("captions") or "").strip():
+        analysis["captions"] = ""
 
 
 def _is_permanent_error(err_str):
