@@ -1,14 +1,16 @@
 """YouTube Data API v3 se Shorts upload (requests-based, koi heavy library nahi).
 
-Ye repo ke pehle se lage secrets use karta hai:
-  YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN
-(purane youtube_upload.py wala proven approach - wahi resumable upload).
+MULTI-CHANNEL support:
+  Channel 1: YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN
+  Channel 2: YT_CLIENT_ID_2, YT_CLIENT_SECRET_2, YT_REFRESH_TOKEN_2
+  (3, 4... bhi aise hi _3, _4 suffix se chalega)
 
 DAILY CAP (over-upload se bachav):
-  count_today_uploads() YouTube se hi poochta hai ki aaj (IST) channel
-  pe kitni videos upload ho chuki hain. Ye git/publish_log se INDEPENDENT
-  hai, isliye chahe log commit fail ho ya run kill ho jaye - duplicate
-  upload ROKA ja sakta hai.
+  count_today_uploads(channel) YouTube se hi poochta hai ki aaj (IST) US
+  channel pe kitni videos upload ho chuki hain. Ye git/publish_log se
+  INDEPENDENT hai, isliye chahe log commit fail ho ya run kill ho jaye -
+  duplicate upload ROKA ja sakta hai. Cap har channel ke liye alag hai
+  (default 2/day per channel).
 """
 import os
 from datetime import datetime, time
@@ -21,24 +23,38 @@ UPLOAD_URL = "https://www.googleapis.com/upload/youtube/v3/videos"
 IST = ZoneInfo("Asia/Kolkata")
 
 
-def _get_env(name):
-    value = os.environ.get(name)
+def _env_suffix(channel):
+    """Channel 1 -> '' (purane naam), channel 2 -> '_2', ..."""
+    return "" if channel == 1 else f"_{channel}"
+
+
+def _get_env(name, channel=1):
+    """Channel ke hisaab se env/secret padho (YT_CLIENT_ID / YT_CLIENT_ID_2)."""
+    value = os.environ.get(name + _env_suffix(channel))
     if not value:
         raise RuntimeError(
-            f"Env/secret '{name}' set nahi hai "
-            f"(repo secrets me YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN hone chahiye)."
+            f"Env/secret '{name}{_env_suffix(channel)}' set nahi hai "
+            f"(repo secrets me {name} / {name}_2 hone chahiye)."
         )
     return value
 
 
-def _refresh_access_token():
-    """Refresh token se naya access token lo."""
+def channel_configured(channel):
+    """Is channel ke secrets set hain? (watchdog/main isse use karte hain)"""
+    return all(
+        os.environ.get(n + _env_suffix(channel))
+        for n in ("YT_CLIENT_ID", "YT_CLIENT_SECRET", "YT_REFRESH_TOKEN")
+    )
+
+
+def _refresh_access_token(channel=1):
+    """Refresh token se naya access token lo (is channel ke secrets se)."""
     resp = requests.post(
         f"{API_BASE}/oauth2/v4/token",
         data={
-            "client_id": _get_env("YT_CLIENT_ID"),
-            "client_secret": _get_env("YT_CLIENT_SECRET"),
-            "refresh_token": _get_env("YT_REFRESH_TOKEN"),
+            "client_id": _get_env("YT_CLIENT_ID", channel),
+            "client_secret": _get_env("YT_CLIENT_SECRET", channel),
+            "refresh_token": _get_env("YT_REFRESH_TOKEN", channel),
             "grant_type": "refresh_token",
         },
         timeout=30,
@@ -48,15 +64,15 @@ def _refresh_access_token():
     return resp.json()["access_token"]
 
 
-def count_today_uploads(max_pages=4):
-    """AAJ (IST) kitni videos channel pe upload ho chuki hain? (int)
+def count_today_uploads(channel=1, max_pages=4):
+    """AAJ (IST) is channel pe kitni videos upload ho chuki hain? (int)
 
     YouTube search API (forMine=true, order=date) se latest videos leta
     hai aur aaj ki IST date wali entries ginta hai. Ye SABSE reliable
     source of truth hai - publish_log.json commit fail ho jaye tab bhi
     duplicate upload nahi hoga.
     """
-    token = _refresh_access_token()
+    token = _refresh_access_token(channel)
     today = datetime.now(IST).date()
     start_of_day = datetime.combine(today, time.min, IST)
     # RFC 3339: 2026-09-24T00:00:00+05:30
@@ -101,9 +117,9 @@ def count_today_uploads(max_pages=4):
     return count
 
 
-def upload_video(video_path, title, description, tags, youtube_cfg):
-    """Video YouTube pe upload karke video id return karo."""
-    access_token = _refresh_access_token()
+def upload_video(video_path, title, description, tags, youtube_cfg, channel=1):
+    """Video is channel ke account se YouTube pe upload karke video id do."""
+    access_token = _refresh_access_token(channel)
     print("  [YT] Access token mila, upload start...")
 
     headers = {"Authorization": f"Bearer {access_token}"}

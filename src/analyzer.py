@@ -9,6 +9,11 @@ manga jata hai: {"title", "description", "script"}
               on-screen captions banti hain (Devanagari nahi). Model
               na de to editor script par fallback kar deta hai.
 
+GEMINI FALLBACK KEYS:
+  - GEMINI_API_KEY pehle try hota hai; uska quota khatam ho jaye
+    (429 PerDay) to GEMINI_API_KEY_2 automatic use hota hai
+    (video dobara upload hoti hai naye key se, baaki sab same)
+
 CRASH FIX (503 "high demand" / 429 "quota" ke liye):
   - har model ke liye 4 attempts (beech me 15/30/60s wait)
   - fail hone pe fallback models ki chain (flash + pro)
@@ -87,26 +92,17 @@ def _is_permanent_error(err_str):
     )
 
 
-def analyze_video(video_path, duration_s, gemini_cfg):
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
+def _api_keys():
+    """Sab available Gemini keys (pehla primary, dusra fallback)."""
+    keys = [os.environ.get("GEMINI_API_KEY"), os.environ.get("GEMINI_API_KEY_2")]
+    keys = [k for k in keys if k]
+    if not keys:
         raise RuntimeError("GEMINI_API_KEY env/secret set nahi hai.")
+    return keys
 
-    client = genai.Client(api_key=api_key)
 
-    # video upload + processing complete hone ka wait
-    print("  Gemini ko video upload ho rahi hai (ye kuch second me le sakti hai)...")
-    f = client.files.upload(file=str(video_path))
-    while f.state.name == "PROCESSING":
-        time.sleep(3)
-        f = client.files.get(name=f.name)
-    if f.state.name != "ACTIVE":
-        raise RuntimeError(f"Gemini file state unexpected: {f.state.name}")
-
-    prompt = PROMPT.format(duration=int(duration_s), words=int(duration_s * 2.5))
-
-    # primary model pehle, phir fallbacks (duplicate hata ke)
-    primary = gemini_cfg.get("model", "gemini-3.6-flash")
+def _try_models(client, file_obj, prompt, primary):
+    """Ek key (client) ke saath saare models try karo. analysis ya raise."""
     models = [primary] + [m for m in FALLBACK_MODELS if m != primary]
 
     last_err = None
@@ -115,7 +111,7 @@ def analyze_video(video_path, duration_s, gemini_cfg):
             try:
                 resp = client.models.generate_content(
                     model=model,
-                    contents=[prompt, f],
+                    contents=[prompt, file_obj],
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json"
                     ),
@@ -145,5 +141,47 @@ def analyze_video(video_path, duration_s, gemini_cfg):
             print(f"  {model} bhi fail - agla fallback model try karte hain...")
 
     raise RuntimeError(
-        f"Gemini analysis fail hua (sab models/moves try ho gaye): {last_err}"
+        f"Is API key pe saare models fail ho gaye: {last_err}"
+    )
+
+
+def analyze_video(video_path, duration_s, gemini_cfg):
+    keys = _api_keys()
+    last_err = None
+
+    for k_idx, api_key in enumerate(keys):
+        client = genai.Client(api_key=api_key)
+
+        # video upload + processing complete hone ka wait
+        key_label = f"key {k_idx + 1}/{len(keys)}"
+        print(f"  Gemini ko video upload ho rahi hai ({key_label})...")
+        try:
+            f = client.files.upload(file=str(video_path))
+            while f.state.name == "PROCESSING":
+                time.sleep(3)
+                f = client.files.get(name=f.name)
+            if f.state.name != "ACTIVE":
+                raise RuntimeError(f"Gemini file state unexpected: {f.state.name}")
+        except RuntimeError:
+            raise
+        except Exception as e:  # noqa: BLE001 - upload fail = agli key try
+            last_err = e
+            print(f"  WARNING: key {k_idx + 1} se upload fail ({e}) - agli key...")
+            continue
+
+        prompt = PROMPT.format(duration=int(duration_s), words=int(duration_s * 2.5))
+        primary = gemini_cfg.get("model", "gemini-3.6-flash")
+
+        try:
+            return _try_models(client, f, prompt, primary)
+        except Exception as e:  # noqa: BLE001 - ye key over, agli key
+            last_err = e
+            if k_idx + 1 < len(keys):
+                print(f"  WARNING: key {k_idx + 1} se analysis fail - "
+                      f"fallback key try kar rahe hain...")
+                continue
+            raise
+
+    raise RuntimeError(
+        f"Gemini analysis fail hua (saare keys/models try ho gaye): {last_err}"
     )
