@@ -164,7 +164,8 @@ def _write_pcm_wav(path, pcm, sample_rate=24000):
 def _gemini_tts(text, cfg, out_path):
     """Gemini 2.5 TTS se natural Hindi voice banao.
 
-    - GEMINI_API_KEY hi chahiye (repo me pehle se hai) - koi naya key nahi
+    - GEMINI_API_KEY pehle; uska quota over ho to GEMINI_API_KEY_2
+      automatic use hota hai (chunk generate ke dauran switch hota hai)
     - lambi script automatic chunks me jaati hai, phir WAV concat
     - fail hone pe fallback chain (ttsfree/IndicF5/edge-tts) chalti hai
     """
@@ -173,8 +174,9 @@ def _gemini_tts(text, cfg, out_path):
     from google import genai
     from google.genai import types
 
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
+    api_keys = [k for k in (os.environ.get("GEMINI_API_KEY"),
+                            os.environ.get("GEMINI_API_KEY_2")) if k]
+    if not api_keys:
         raise RuntimeError("GEMINI_API_KEY env/secret set nahi hai.")
 
     model = cfg.get("model", "gemini-2.5-flash-preview-tts")
@@ -185,16 +187,39 @@ def _gemini_tts(text, cfg, out_path):
         "tone, speaking natural Hindi:",
     )
 
-    client = genai.Client(api_key=api_key)
+    client = genai.Client(api_key=api_keys[0])
+    key_idx = 0
+
+    def _generate(model, contents, config):
+        """Generate karo; quota/key error pe agli key se retry."""
+        nonlocal client, key_idx
+        try:
+            return client.models.generate_content(
+                model=model, contents=contents, config=config
+            )
+        except Exception as e:  # noqa: BLE001
+            err = str(e)
+            quota_or_auth = any(s in err for s in (
+                "RESOURCE_EXHAUSTED", "429", "quota",
+                "API key not valid", "PERMISSION_DENIED",
+            ))
+            if quota_or_auth and key_idx + 1 < len(api_keys):
+                key_idx += 1
+                print(f"  [GeminiTTS] key {key_idx} quota/issue - fallback key se retry...")
+                client = genai.Client(api_key=api_keys[key_idx])
+                return client.models.generate_content(
+                    model=model, contents=contents, config=config
+                )
+            raise
 
     chunks = _split_script(text, max_chars=1500)
     parts = []
     for i, chunk in enumerate(chunks):
         print(f"  [GeminiTTS] chunk {i + 1}/{len(chunks)} generate ho raha hai...")
-        resp = client.models.generate_content(
-            model=model,
-            contents=f"{style}\n\n{chunk}",
-            config=types.GenerateContentConfig(
+        resp = _generate(
+            model,
+            f"{style}\n\n{chunk}",
+            types.GenerateContentConfig(
                 response_modalities=["AUDIO"],
                 speech_config=types.SpeechConfig(
                     voice_config=types.VoiceConfig(
@@ -335,7 +360,7 @@ INDICF5_VOICES = {
     # female, happy
     "kannada_female_happy": {
         "url": "https://github.com/AI4Bharat/IndicF5/raw/refs/heads/main/prompts/KAN_F_HAPPY_00001.wav",
-        "ref_text": "\u0ca8\u0cae\u0ccd \u0cab\u0ccd\u0cb0\u0cbf\u0c9c\u0ccd\u0c9c\u0cb2\u0ccd\u0cb2\u0cbf \u0c95\u0cc2\u0cb2\u0cbf\u0c82\u0c97\u0ccd \u0cb8\u0cae\u0cb8\u0ccd\u0caf\u0cc6 \u0c86\u0c97\u0cbf \u0ca8\u0cbe\u0ca8\u0ccd \u0cad\u0cbe\u0cb3 \u0ca6\u0cbf\u0ca8\u0ca6\u0cbf\u0c82\u0ca6 \u0c92\u0ca6\u0ccd\u0ca6\u0cbe\u0ca1\u0ccd\u0ca4\u0cbf\u0ca6\u0ccd\u0ca6\u0cc6, \u0c86\u0ca6\u0ccd\u0cb0\u0cc6 \u0c85\u0ca6\u0ccd\u0ca8\u0cc0\u0c97 \u0cae\u0cc6\u0c95\u0cbe\u0ca8\u0cbf\u0c95\u0ccd \u0c86\u0c97\u0cbf\u0cb0\u0ccb \u0ca8\u0cbf\u0cae\u0ccd \u0cb8\u0cb9\u0cbe\u0caf\u0ccd\u0ca6\u0cbf\u0c82\u0ca6 \u0cac\u0c97\u0cc6\u0cb9\u0cb0\u0cbf\u0cb8\u0ccd\u0c95\u0ccb\u0cac\u0ccb\u0ca6\u0cc1 \u0c85\u0c82\u0ca4\u0cbe\u0c97\u0cbf \u0ca8\u0cbf\u0cb0\u0cbe\u0cb3 \u0c86\u0caf\u0ccd\u0ca4\u0cc1 \u0ca8\u0c82\u0c97\u0cc6.",
+        "ref_text": "\u0ca8\u0cae\u0ccd \u0cab\u0ccd\u0cb0\u0cbf\u0c9c\u0ccd\u0c9c\u0cb2\u0ccd\u0cb2\u0cbf \u0c95\u0cc2\u0cb2\u0cbf\u0c82\u0c97\u0ccd \u0cb8\u0cae\u0cb8\u0ccd\u0caf\u0cc6 \u0c86\u0c97\u0cbf \u0ca8\u0bbe\u0ca8\u0ccd \u0cad\u0cbe\u0cb3 \u0ca6\u0cbf\u0ca8\u0ca6\u0cbf\u0c82\u0ca6 \u0c92\u0ca6\u0ccd\u0ca6\u0cbe\u0ca1\u0ccd\u0ca4\u0cbf\u0ca6\u0ccd\u0ca6\u0cc6, \u0c86\u0ca6\u0ccd\u0cb0\u0cc6 \u0c85\u0ca6\u0ccd\u0ca8\u0cc0\u0c97 \u0cae\u0cc6\u0c95\u0cbe\u0ca8\u0cbf\u0c95\u0ccd \u0c86\u0c97\u0cbf\u0cb0\u0ccb \u0ca8\u0cbf\u0cae\u0ccd \u0cb8\u0cb9\u0cbe\u0caf\u0ccd\u0ca6\u0cbf\u0c82\u0ca6 \u0cac\u0c97\u0cc6\u0cb9\u0cb0\u0cbf\u0cb8\u0ccd\u0c95\u0ccb\u0cac\u0ccb\u0ca6\u0cc1 \u0c85\u0c82\u0ca4\u0cbe\u0c97\u0cbf \u0ca8\u0cbf\u0cb0\u0cbe\u0cb3 \u0c86\u0caf\u0ccd\u0ca4\u0cc1 \u0ca8\u0c82\u0c97\u0cc6.",
     },
 }
 
