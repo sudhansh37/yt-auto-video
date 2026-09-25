@@ -39,7 +39,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from analyzer import analyze_video            # noqa: E402
 from downloader import download_video, list_short_ids  # noqa: E402
-from editor import edit_video, get_duration   # noqa: E402
+from editor import edit_video, extract_audio, get_duration  # noqa: E402
 from history import load_history, mark_used, save_history, trim_history  # noqa: E402
 from tts import synthesize                    # noqa: E402
 from uploader import channel_configured, upload_video, count_today_uploads  # noqa: E402
@@ -208,6 +208,16 @@ def main():
     audio = synthesize(analysis["script"], cfg["tts"], work / "voice.mp3")
     print(f"Hindi voice ready: {audio.name}")
 
+    # ---- 4.5 ORIGINAL VOICEOVER save karo (final me 10% pe mix hogi) ----
+    # Source video ki asli awaaz extract karke save karo. Edit ke waqt ye
+    # 10% volume pe Hindi TTS (100%) ke neeche mix hoti hai.
+    print("Original voiceover save ho rahi hai...")
+    orig_voice = extract_audio(src, work / "original_voice.m4a")
+    if orig_voice:
+        print(f"Original voice ready: {orig_voice.name}")
+    else:
+        print("Original voice nahi mili - edit me music fallback use hoga.")
+
     # ---- 5. edit: crop + effects + music + HINGLISH CAPTIONS ----
     variant = random.choice(cfg["effects"]["variants"])
     # on-screen captions: HINGLISH (roman) - Devanagari sirf voice ke liye
@@ -217,8 +227,9 @@ def main():
     else:
         caption_text = analysis["captions"]
     out = edit_video(src, audio, work / "final.mp4", variant, cfg["effects"],
-                     script=caption_text)
-    print(f"Edit complete (effect={variant}, captions={cap_lang}) -> {out.name}")
+                     script=caption_text, orig_audio=orig_voice)
+    print(f"Edit complete (effect={variant}, captions={cap_lang}, "
+          f"orig-voice={bool(orig_voice)}) -> {out.name}")
 
     # ---- 6. upload se PEHLE history + pending log (KILL-SAFE) ----
     # Agar run upload ke dauran/beech me kill ho jaye (timeout aadi), to bhi:

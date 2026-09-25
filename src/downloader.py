@@ -15,6 +15,7 @@ you're not a bot" dikha deta hai. Isliye:
 """
 import os
 import tempfile
+import time
 from pathlib import Path
 
 import yt_dlp
@@ -50,7 +51,7 @@ def list_short_ids(channel_url):
     return [e["id"] for e in entries if e and e.get("id")]
 
 
-def _download_attempt(video_id, out_dir, client):
+def _download_attempt(video_id, out_dir, client, started=0.0):
     url = f"https://www.youtube.com/watch?v={video_id}"
     opts = {
         # width<=1080 = vertical video ka full HD (1080x1920)
@@ -61,6 +62,8 @@ def _download_attempt(video_id, out_dir, client):
         # EJS challenge solver - n-challenge solve karke saare formats milte hain
         "remote_components": ["ejs:github"],
         "cookiefile": _write_cookies_if_any(),
+        # output file pehle se ho to bhi FORCE re-download
+        "overwrites": True,
     }
     if client:
         opts["extractor_args"] = {"youtube": {"player_client": client}}
@@ -68,19 +71,40 @@ def _download_attempt(video_id, out_dir, client):
     with yt_dlp.YoutubeDL(opts) as ydl:
         ydl.download([url])
     for p in sorted(out_dir.glob("source.*")):
-        return p
+        # sirf FRESH file accept karo - download shuru hone se pehle ki
+        # koi bachi hui STALE file reject karo (1s tolerance ke saath)
+        if p.stat().st_mtime + 1 >= started:
+            return p
+        print(f"[downloader] WARNING: stale file reject ho rahi hai: {p}")
     return None
 
 
 def download_video(video_id, out_dir):
-    """Ek video download karo - pehle default client, phir fallbacks try karo."""
+    """Ek video download karo - pehle default client, phir fallbacks try karo.
+
+    STALE-FILE GUARD: channel 1 aur channel 2 ek hi 'work' folder share
+    karte hain. yt-dlp pehle se maujood output file ko 'already downloaded'
+    maan kar download SILENTLY SKIP kar deta hai - is wajah se ek hi video
+    dono channels pe upload ho gayi thi (ch2 ne ch1 ki source.mp4 hi use
+    kar li thi). Isliye download se PEHLE purani source.* files delete
+    hoti hain, 'overwrites' force hota hai, aur file ka mtime verify hota
+    hai ki wo abhi ki hi download hai.
+    """
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    # purani source files hata do (ch1/ch2 ya pichhli run ki)
+    for old in out_dir.glob("source.*"):
+        try:
+            old.unlink()
+        except OSError:
+            pass
+
+    started = time.time()
     last_err = None
     for client in PLAYER_CLIENT_FALLBACKS:
         try:
-            path = _download_attempt(video_id, out_dir, client)
+            path = _download_attempt(video_id, out_dir, client, started)
             if path:
                 return path
         except Exception as e:  # noqa: BLE001 - fallback chain

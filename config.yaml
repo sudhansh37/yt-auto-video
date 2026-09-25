@@ -86,7 +86,11 @@ effects:
   brightness: 0.04     # thoda bright (0 = normal, 0.10 = kaafi bright)
   sharpen: 1.0         # sharpness / crisp look (0 = band, 1.5 = bahut sharp)
   video_speed: 1.12    # video thodi tez (1.0 = normal, 1.3 = bahut tez)
-  bgm_volume: 0.10     # slow background music volume (0 = band, 0.20 = zyada)
+  orig_voice_volume: 0.10  # ORIGINAL VOICEOVER volume (source video ki asli
+                          # awaaz) - Hindi TTS 100% pe rehti hai. 0 karoge to
+                          # original awaaz band ho jayegi (phir music fallback)
+  bgm_volume: 0.10     # (sirf fallback) original audio na mile to ye slow
+                        # background music chalti hai (0 = band, 0.20 = zyada)
   # preset: "medium"    # (optional) low-memory machine pe "ultrafast" + threads: 1
   # threads: 1          # GitHub Actions ke liye kuch nahi badalna
 
