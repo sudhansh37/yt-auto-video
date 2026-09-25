@@ -10,7 +10,8 @@
 #     me 30 min baad dobara try karta hai
 #
 # NOTE: pehla step sirf stdlib use karta hai (koi pip install nahi), isliye
-# no-op runs bilkul sasti hain.
+# no-op runs bilkul sasti hain. Per-channel check hota hai - channel 2
+# ke secrets na hone pe wo monitor hi nahi hota.
 
 name: watchdog
 
@@ -30,9 +31,23 @@ concurrency:
 jobs:
   check-and-publish:
     runs-on: ubuntu-latest
-    # 55 min: run beech me kill ho to upload ke baad log likhne ka mauka
-    # hi nahi milta (wahi duplicate uploads ka reason tha)
-    timeout-minutes: 55
+    # 75 min: dono channels ke catch-up ek ke baad ek chalte hain
+    timeout-minutes: 75
+    # JOB-LEVEL env: check-only step ko bhi channel 2 ke secrets dikhne
+    # chahiye (warna wo channel ko monitor hi nahi kar payega)
+    env:
+      GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_API_KEY_2:   ${{ secrets.GEMINI_API_KEY_2 }}
+      YT_CLIENT_ID:        ${{ secrets.YT_CLIENT_ID }}
+      YT_CLIENT_SECRET:    ${{ secrets.YT_CLIENT_SECRET }}
+      YT_REFRESH_TOKEN:    ${{ secrets.YT_REFRESH_TOKEN }}
+      YT_CLIENT_ID_2:      ${{ secrets.YT_CLIENT_ID_2 }}
+      YT_CLIENT_SECRET_2:  ${{ secrets.YT_CLIENT_SECRET_2 }}
+      YT_REFRESH_TOKEN_2:  ${{ secrets.YT_REFRESH_TOKEN_2 }}
+      YOUTUBE_COOKIES:     ${{ secrets.YOUTUBE_COOKIES }}
+      HF_TOKEN:            ${{ secrets.HF_TOKEN }}
+      ttsfree:             ${{ secrets.ttsfree }}
+      VOICE: hi-IN-MadhurNeural
     steps:
       - uses: actions/checkout@v4
 
@@ -67,15 +82,6 @@ jobs:
 
       - name: Catch-up publish (missed slots)
         if: steps.check.outputs.needed == 'true'
-        env:
-          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
-          YT_CLIENT_ID:        ${{ secrets.YT_CLIENT_ID }}
-          YT_CLIENT_SECRET:    ${{ secrets.YT_CLIENT_SECRET }}
-          YT_REFRESH_TOKEN:    ${{ secrets.YT_REFRESH_TOKEN }}
-          YOUTUBE_COOKIES:     ${{ secrets.YOUTUBE_COOKIES }}
-          HF_TOKEN:            ${{ secrets.HF_TOKEN }}
-          ttsfree:             ${{ secrets.ttsfree }}
-          VOICE: hi-IN-MadhurNeural
         run: python src/watchdog.py
 
       - name: Save history + publish log

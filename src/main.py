@@ -14,10 +14,16 @@ Hindi Shorts Bot - main pipeline
 9. pending entry ko real video id se confirm karo
 
 Usage:
-    python src/main.py           # default mode = mix
-    python src/main.py latest    # sabse nayi unused video
-    python src/main.py random    # koi bhi unused purani video
-    python src/main.py mix       # 50% latest, 50% random purani
+    python src/main.py [mode] [channel]
+    python src/main.py                  # mode=mix, channel 1
+    python src/main.py latest           # mode=latest, channel 1
+    python src/main.py mix 2            # mode=mix, channel 2
+
+Channels:
+    Channel 1 -> YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN
+    Channel 2 -> YT_CLIENT_ID_2, YT_CLIENT_SECRET_2, YT_REFRESH_TOKEN_2
+    Har channel ki apni 2/day limit hai; history SHARED hai isliye ek
+    hi video dono channels pe kabhi nahi jayegi.
 """
 import json
 import random
@@ -36,10 +42,10 @@ from downloader import download_video, list_short_ids  # noqa: E402
 from editor import edit_video, get_duration   # noqa: E402
 from history import load_history, mark_used, save_history, trim_history  # noqa: E402
 from tts import synthesize                    # noqa: E402
-from uploader import upload_video, count_today_uploads  # noqa: E402
+from uploader import channel_configured, upload_video, count_today_uploads  # noqa: E402
 
 IST = ZoneInfo("Asia/Kolkata")
-MAX_PER_DAY = 2   # din me SIRF itni videos (10:00 / 15:00 slots)
+MAX_PER_DAY = 2   # har channel ke liye SIRF itni videos (10:00 / 15:00 slots)
 
 
 def load_config():
@@ -55,11 +61,12 @@ def _load_publish_log():
         return {"publishes": []}
 
 
-def log_publish(yt_id):
+def log_publish(yt_id, channel=1):
     """publish_log.json me aaj ki entry likho (watchdog ke liye).
 
-    watchdog har 30 min me isse padh kar check karta hai ki aaj ke
-    slots (10:00 / 15:00 IST) pe video publish hui ya nahi.
+    Entry me 'ch' field se pata chalta hai kaunse channel ki video hai.
+    watchdog har 30 min me isse padh kar per-channel check karta hai ki
+    aaj ke slots (10:00 / 15:00 IST) pe video publish hui ya nahi.
     """
     log_path = ROOT / "data" / "publish_log.json"
     log_path.parent.mkdir(exist_ok=True)
@@ -68,13 +75,14 @@ def log_publish(yt_id):
     log["publishes"].append({
         "date": now.strftime("%Y-%m-%d"),
         "time": now.strftime("%H:%M"),
+        "ch": channel,
         "yt": yt_id,
     })
     log_path.write_text(json.dumps(log, ensure_ascii=False, indent=1),
                         encoding="utf-8")
 
 
-def confirm_pending_publish(yt_id):
+def confirm_pending_publish(yt_id, channel=1):
     """Upload se pehle likhi gayi 'pending' entry ko real video id se badlo.
 
     Agar 'pending' entry nahi mili (kisi wajah se), to fresh entry likh do.
@@ -84,46 +92,49 @@ def confirm_pending_publish(yt_id):
     pubs = log.get("publishes", [])
     today = datetime.now(IST).date().isoformat()
     for e in reversed(pubs):
-        if e.get("yt") == "pending" and e.get("date") == today:
+        if e.get("yt") == "pending" and e.get("ch", 1) == channel \
+                and e.get("date") == today:
             e["yt"] = yt_id
             log_path.write_text(
                 json.dumps(log, ensure_ascii=False, indent=1),
                 encoding="utf-8",
             )
             return
-    log_publish(yt_id)   # pending nahi mili - nayi entry
+    log_publish(yt_id, channel)   # pending nahi mili - nayi entry
 
 
-def _local_count_today():
-    """publish_log.json me aaj (IST) ki kitni entries hain? (pending included)"""
+def _local_count_today(channel=1):
+    """publish_log.json me aaj (IST) is channel ki kitni entries hain?"""
     today = datetime.now(IST).date().isoformat()
     return sum(
         1 for e in _load_publish_log().get("publishes", [])
-        if e.get("date") == today
+        if e.get("date") == today and e.get("ch", 1) == channel
     )
 
 
-def daily_cap_reached():
-    """AAJ ki limit (2 videos) already ho gayi? (True/False)
+def daily_cap_reached(channel=1):
+    """Is channel ki aaj ki limit (2 videos) already ho gayi? (True/False)
 
     DO sources se check hota hai:
       1. local publish_log.json (fast)
-      2. YouTube API se aaj ki uploaded videos ka REAL count
+      2. YouTube API se is channel ki aaj ki videos ka REAL count
          (authoritative - git commit fail ho jaye tab bhi sahi rahega)
     """
-    local = _local_count_today()
+    local = _local_count_today(channel)
     if local >= MAX_PER_DAY:
-        print(f"[cap] publish_log me aaj ki {local} videos already hain - "
-              f"limit {MAX_PER_DAY} - aaj aur upload NAHI hoga.")
+        print(f"[cap] ch{channel}: publish_log me aaj ki {local} videos "
+              f"already hain - limit {MAX_PER_DAY} - aaj aur upload NAHI hoga.")
         return True
     try:
-        yt_count = count_today_uploads()
-        print(f"[cap] YouTube ke hisaab se aaj {yt_count} videos upload ho chuki hain.")
+        yt_count = count_today_uploads(channel)
+        print(f"[cap] ch{channel}: YouTube ke hisaab se aaj {yt_count} videos "
+              f"upload ho chuki hain.")
         if yt_count >= MAX_PER_DAY:
-            print(f"[cap] YouTube limit {MAX_PER_DAY} poori - aaj bas, kal 10 AM pe fir se.")
+            print(f"[cap] ch{channel}: YouTube limit {MAX_PER_DAY} poori - "
+                  f"aaj bas, kal 10 AM pe fir se.")
             return True
     except Exception as e:  # noqa: BLE001 - API fail ho to local pe chalte hain
-        print(f"[cap] WARNING: YouTube count nahi ho paya ({e}) - "
+        print(f"[cap] ch{channel}: WARNING: YouTube count nahi ho paya ({e}) - "
               f"local log ({local}/{MAX_PER_DAY}) ka use kar raha hoon.")
     return False
 
@@ -145,13 +156,22 @@ def pick_video(ids, history, mode):
 
 def main():
     mode = sys.argv[1] if len(sys.argv) > 1 else "mix"
+    channel = int(sys.argv[2]) if len(sys.argv) > 2 else 1
     cfg = load_config()
 
-    # ---- 0. HARD DAILY CAP ----
-    # Din me SIRF 2 videos (10 AM + 3 PM). Chahe cron double-fire ho,
-    # watchdog over-retry kare, ya purani run ka data commit na hua ho -
-    # YouTube se seedha count karke aaj ki limit cross NAHI hogi.
-    if daily_cap_reached():
+    # channel ke secrets set nahi hain to quietly skip (fail nahi karna -
+    # dusra channel isse affected na ho)
+    if channel > 1 and not channel_configured(channel):
+        print(f"[ch{channel}] Secrets set nahi hain (YT_CLIENT_ID_{channel} aadi) - "
+              f"ye channel skip kar raha hoon.")
+        sys.exit(0)
+
+    # ---- 0. HARD DAILY CAP (is channel ke liye) ----
+    # Din me SIRF 2 videos is channel pe (10 AM + 3 PM). Chahe cron
+    # double-fire ho, watchdog over-retry kare, ya purani run ka data
+    # commit na hua ho - YouTube se seedha count karke limit cross
+    # NAHI hogi.
+    if daily_cap_reached(channel):
         sys.exit(0)   # exit 0: watchdog ise 'done' maane, dobara na chalaye
 
     work = ROOT / "work"
@@ -202,13 +222,14 @@ def main():
 
     # ---- 6. upload se PEHLE history + pending log (KILL-SAFE) ----
     # Agar run upload ke dauran/beech me kill ho jaye (timeout aadi), to bhi:
-    #   - ye source video dobara use nahi hogi (history saved)
-    #   - 'pending' entry watchdog ko batayegi ki slot cover ho gaya
-    #     (duplicate upload ka poora chain yahin kat jata hai)
+    #   - ye source video dobara use nahi hogi (history SHARED hai,
+    #     isliye NAHI to NAHI - dono channels pe)
+    #   - 'pending' entry watchdog ko batayegi ki is channel ka slot
+    #     cover ho gaya (duplicate upload ka poora chain yahin katta hai)
     mark_used(history, video_id)
     trim_history(history, cfg["channel"]["max_history"])
     save_history(history)
-    log_publish("pending")
+    log_publish("pending", channel)
 
     # ---- 7. YouTube upload ("AI use" disclosure auto-on) ----
     title = analysis["title"]
@@ -216,12 +237,12 @@ def main():
         title = f"{title} #Shorts"
     yt_id = upload_video(
         out, title, analysis["description"],
-        cfg["youtube"].get("tags", []), cfg["youtube"],
+        cfg["youtube"].get("tags", []), cfg["youtube"], channel=channel,
     )
-    print("YouTube pe upload ho gaya.")
+    print(f"YouTube (channel {channel}) pe upload ho gaya.")
 
     # ---- 8. pending entry ko real video id se confirm karo ----
-    confirm_pending_publish(yt_id)
+    confirm_pending_publish(yt_id, channel)
     print("History + publish log update ho gayi - ye video dobara use nahi hogi.")
 
 

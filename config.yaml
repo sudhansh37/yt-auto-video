@@ -2,6 +2,15 @@
 # Secrets (repo me pehle se lage hain - Actions me):
 #   GEMINI_API_KEY, YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN,
 #   YOUTUBE_COOKIES, HF_TOKEN, ttsfree (TTSFree.com ka apikey)
+#
+# DUSRA CHANNEL (optional) - bas ye 3 secrets add karo:
+#   YT_CLIENT_ID_2, YT_CLIENT_SECRET_2, YT_REFRESH_TOKEN_2
+# Dono channels pe roz 2-2 videos jayengi (alag-alag videos), same
+# time pe: 10:00 AM aur 3:00 PM IST.
+#
+# GEMINI FALLBACK KEY (optional):
+#   GEMINI_API_KEY_2 - pehle wale ka quota khatam ho to ye automatic
+#   use hota hai (analysis + TTS dono me)
 
 channel:
   # Source channel ke shorts ka page (saare shorts ki list yahan se milti hai)

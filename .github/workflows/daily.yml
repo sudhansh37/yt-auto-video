@@ -1,12 +1,14 @@
 # Hindi Shorts Bot - scheduled publisher (Zack D. Films -> Hindi Shorts)
 #
-# Din me SIRF 2 videos:
+# Din me SIRF 2 videos PER CHANNEL:
 #   10:00 AM IST = 04:30 UTC
 #   03:00 PM IST = 09:30 UTC
 # TIME CHANGE KARNA HO TO niche cron lines edit karo (UTC me hota hai,
 # IST se 5 ghante 30 minute peeche).
 # NOTE: cron drop ho jaye to watchdog.yml (har 30 min) automatic catch-up
 # kar deta hai - usko disable mat karna.
+# CHANNEL 2: YT_CLIENT_ID_2 aadi secrets add karte hi wo bhi apne aap
+# chalne lagega (same time pe apni alag video upload karega).
 
 name: publish-short
 
@@ -33,9 +35,24 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    # 55 min: run beech me kill ho to upload ke baad log likhne ka mauka
-    # hi nahi milta (wahi duplicate uploads ka reason tha)
-    timeout-minutes: 55
+    # 75 min: dono channels ke pipelines ek ke baad ek chalte hain
+    # (ch1 ~15-25 min + ch2 ~15-25 min). Run beech me kill ho to upload
+    # ke baad log likhne ka mauka hi nahi milta (wahi duplicate uploads ka
+    # reason tha)
+    timeout-minutes: 75
+    env:
+      GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_API_KEY_2:    ${{ secrets.GEMINI_API_KEY_2 }}
+      YT_CLIENT_ID:        ${{ secrets.YT_CLIENT_ID }}
+      YT_CLIENT_SECRET:    ${{ secrets.YT_CLIENT_SECRET }}
+      YT_REFRESH_TOKEN:    ${{ secrets.YT_REFRESH_TOKEN }}
+      YT_CLIENT_ID_2:      ${{ secrets.YT_CLIENT_ID_2 }}
+      YT_CLIENT_SECRET_2:  ${{ secrets.YT_CLIENT_SECRET_2 }}
+      YT_REFRESH_TOKEN_2:  ${{ secrets.YT_REFRESH_TOKEN_2 }}
+      YOUTUBE_COOKIES:     ${{ secrets.YOUTUBE_COOKIES }}
+      HF_TOKEN:            ${{ secrets.HF_TOKEN }}
+      ttsfree:             ${{ secrets.ttsfree }}
+      VOICE: hi-IN-MadhurNeural
     steps:
       - uses: actions/checkout@v4
 
@@ -56,17 +73,15 @@ jobs:
       - name: Install Python packages
         run: pip install --quiet -r requirements.txt
 
-      - name: Run pipeline
-        env:
-          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
-          YT_CLIENT_ID:        ${{ secrets.YT_CLIENT_ID }}
-          YT_CLIENT_SECRET:    ${{ secrets.YT_CLIENT_SECRET }}
-          YT_REFRESH_TOKEN:    ${{ secrets.YT_REFRESH_TOKEN }}
-          YOUTUBE_COOKIES:     ${{ secrets.YOUTUBE_COOKIES }}
-          HF_TOKEN:            ${{ secrets.HF_TOKEN }}
-          ttsfree:             ${{ secrets.ttsfree }}
-          VOICE: hi-IN-MadhurNeural
-        run: python src/main.py "${{ github.event.inputs.mode || 'mix' }}"
+      - name: Run pipeline - Channel 1
+        run: python src/main.py "${{ github.event.inputs.mode || 'mix' }}" 1
+
+      - name: Run pipeline - Channel 2
+        # always() = channel 1 fail ho to bhi channel 2 ki video jaaye.
+        # Channel 2 ke secrets na hon to main.py khud skip kar deta hai
+        # (exit 0), isliye ye step kabhi red nahi hota.
+        if: always()
+        run: python src/main.py "${{ github.event.inputs.mode || 'mix' }}" 2
 
       - name: Save history + publish log
         # always() = pipeline fail/retry ho tab bhi jitna data bana hai
