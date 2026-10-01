@@ -86,11 +86,9 @@ effects:
   brightness: 0.04     # thoda bright (0 = normal, 0.10 = kaafi bright)
   sharpen: 1.0         # sharpness / crisp look (0 = band, 1.5 = bahut sharp)
   video_speed: 1.12    # video thodi tez (1.0 = normal, 1.3 = bahut tez)
-  orig_voice_volume: 0.0   # ORIGINAL (English) VOICEOVER - ABHI OFF.
-                          # Chahiye to 0.10 kar do (Hindi TTS ke neeche halki
-                          # background me mix ho jayegi).
-  bgm_volume: 0.10     # background music (original voice OFF hone pe ye
-                       # chalti hai; 0 = band, 0.20 = zyada)
+  bgm_volume: 0.10     # halki background music (0 = band, 0.20 = zyada).
+                       # NOTE: original English audio kabhi mix nahi hota -
+                       # audio 100% Hindi (TTS) rehta hai.
   # preset: "medium"    # (optional) low-memory machine pe "ultrafast" + threads: 1
   # threads: 1          # GitHub Actions ke liye kuch nahi badalna
 

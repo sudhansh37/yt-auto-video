@@ -9,10 +9,9 @@ ffmpeg editor v5 - Hindi Short banata hai:
   4. Color grade: saturation + contrast + brightness
   5. Sharpness (unsharp)
   6. Video thodi tez + voice loudness normalize
-  7. ORIGINAL VOICEOVER (source video ki asli awaaz) - config se on/off
-     (orig_voice_volume). > 0 ho to extract_audio() usko save karta hai aur
-     usi volume pe mix hoti hai; Hindi TTS 100% pe rehti hai. ABHI OFF hai
-     (0.0) - tab Hindi TTS (ya music) hi chalta hai.
+  7. Background music (halki, copyright-free ffmpeg synth) - sirf Hindi TTS
+     voice ke saath. Original English audio BILKUL mix NAHI hota (feature
+     poora hata diya gaya hai - audio 100% Hindi rehna chahiye).
   8. TIME-SYNCED HINGLISH CAPTIONS - jo script Gemini likhta hai (jo voice
      bolti hai) wahi text video pe bottom me white-on-black dikhta hai.
      Captions HINGLISH (Roman letters) me hoti hain - Devanagari text aaye
@@ -228,48 +227,21 @@ def _slow_music_source():
     return f"aevalsrc='{expr}':s=44100"
 
 
-def extract_audio(src, out_path):
-    """Source video se ORIGINAL VOICEOVER nikaal ke save karo.
-
-    Final video me ye awaaz 10% volume pe Hindi TTS (100%) ke neeche
-    mix hoti hai - user spec: "original voiceover 10%, Hindi TTS 100%".
-    Source me audio stream hi na ho (ya ffmpeg fail ho) to None return
-    hota hai aur editor music fallback use karta hai.
-    """
-    out_path = Path(out_path)
-    cmd = [
-        FFMPEG, "-y",
-        "-i", str(src),
-        "-vn",                      # video nahi, sirf audio
-        "-c:a", "aac", "-b:a", "192k",
-        str(out_path),
-    ]
-    try:
-        _run(cmd)
-        if out_path.exists() and out_path.stat().st_size > 1000:
-            return out_path
-    except Exception as e:  # noqa: BLE001 - audio na mile to music fallback
-        print(f"[editor] WARNING: original voice extract nahi hui: {e}")
-    return None
-
-
-def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
-               orig_audio=None):
+def edit_video(src, audio, out_path, variant, effects_cfg, script=None):
     """Source video + TTS audio se final 9:16 Short banao. Output path return.
 
     script diya to time-synced captions bhi lagti hain (Hinglish ya
     Devanagari - text ke hisaab se font khud choose hota hai). Jo voice
     bolti hai wahi text video pe dikhta hai.
 
-    orig_audio diya to ORIGINAL VOICEOVER 10% + Hindi TTS 100% mix hota
-    hai (user spec). Nahi diya to slow music fallback.
+    AUDIO: sirf Hindi TTS voice (loudnorm) + halki background music.
+    Original English audio kabhi mix NAHI hota.
     """
     src, audio, out_path = Path(src), Path(audio), Path(out_path)
     duration = get_duration(src)
     audio_dur = get_duration(audio)
     speed = float(effects_cfg.get("video_speed", 1.12))
     bgm_volume = float(effects_cfg.get("bgm_volume", 0.10))
-    orig_volume = float(effects_cfg.get("orig_voice_volume", 0.10))
     zoom_amount = float(effects_cfg.get("zoom_amount", 0.28))
 
     out_duration = min(duration / speed, audio_dur)
@@ -305,21 +277,11 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
 
     vf += "setsar=1"
 
-    # ---- audio mixing ----
-    # OPTION 1 (default): ORIGINAL VOICEOVER 10% + Hindi TTS 100%
-    #   - original awaaz video timeline se sync rehti hai (atempo=speed,
-    #     kyunki video speed-up hoti hai)
-    # OPTION 2 (fallback): original audio na mile to slow bgm music
-    # OPTION 3: dono config me 0 ho to sirf Hindi TTS voice
-    if orig_audio and orig_volume > 0:
-        # atempo range 0.5..100 - speed bahar ho to clamp karo
-        orig_speed = min(max(speed, 0.5), 100.0)
-        af = (
-            f"[1:a]loudnorm=I=-16:TP=-1.5:LRA=11[voice];"
-            f"[2:a]atempo={orig_speed},volume={orig_volume}[orig];"
-            f"[voice][orig]amix=inputs=2:duration=first:normalize=0[a]"
-        )
-    elif bgm_volume > 0:
+    # ---- audio mixing (100% Hindi) ----
+    # Hindi TTS voice (loudnorm) + halki background music.
+    # Original English audio BILKUL mix nahi hota - audio hamesha Hindi
+    # hi rehta hai (algorithm confuse na ho ki Hindi hai ya English).
+    if bgm_volume > 0:
         af = (
             f"[1:a]loudnorm=I=-16:TP=-1.5:LRA=11[voice];"
             f"[2:a]volume={bgm_volume},lowpass=f=1100[bg];"
@@ -333,9 +295,7 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
         "-i", str(src),
         "-i", str(audio),
     ]
-    if orig_audio and orig_volume > 0:
-        cmd += ["-i", str(orig_audio)]
-    elif bgm_volume > 0:
+    if bgm_volume > 0:
         cmd += ["-f", "lavfi", "-t", f"{out_duration + 2:.2f}",
                 "-i", _slow_music_source()]
 

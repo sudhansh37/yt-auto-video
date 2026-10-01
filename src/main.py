@@ -39,7 +39,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from analyzer import analyze_video            # noqa: E402
 from downloader import download_video, list_short_ids  # noqa: E402
-from editor import edit_video, extract_audio, get_duration  # noqa: E402
+from editor import edit_video, get_duration   # noqa: E402
 from history import load_history, mark_used, save_history, trim_history  # noqa: E402
 from tts import synthesize                    # noqa: E402
 from uploader import channel_configured, upload_video, count_today_uploads  # noqa: E402
@@ -208,19 +208,6 @@ def main():
     audio = synthesize(analysis["script"], cfg["tts"], work / "voice.mp3")
     print(f"Hindi voice ready: {audio.name}")
 
-    # ---- 4.5 ORIGINAL VOICEOVER (config se on/off; abhi OFF) ----
-    # orig_voice_volume > 0 ho to source ki original awaaz extract karke
-    # final me usi volume pe mix hoti hai. 0 (default abhi) ho to extract
-    # hi nahi karte - sirf Hindi TTS (ya music fallback) chalta hai.
-    orig_voice = None
-    if float(cfg["effects"].get("orig_voice_volume", 0.0)) > 0:
-        print("Original voiceover save ho rahi hai...")
-        orig_voice = extract_audio(src, work / "original_voice.m4a")
-        if orig_voice:
-            print(f"Original voice ready: {orig_voice.name}")
-        else:
-            print("Original voice nahi mili - edit me music fallback use hoga.")
-
     # ---- 5. edit: crop + effects + CAPTIONS (config se on/off) ----
     variant = random.choice(cfg["effects"]["variants"])
     # on-screen captions: config me captions.enabled false ho to OFF
@@ -233,10 +220,9 @@ def main():
         else:
             caption_text = analysis["captions"]
     out = edit_video(src, audio, work / "final.mp4", variant, cfg["effects"],
-                     script=caption_text, orig_audio=orig_voice)
+                     script=caption_text)
     print(f"Edit complete (effect={variant}, "
-          f"captions={'on' if caption_text else 'off'}, "
-          f"orig-voice={bool(orig_voice)}) -> {out.name}")
+          f"captions={'on' if caption_text else 'off'}) -> {out.name}")
 
     # ---- 6. upload se PEHLE history + pending log (KILL-SAFE) ----
     # Agar run upload ke dauran/beech me kill ho jaye (timeout aadi), to bhi:
