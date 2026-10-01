@@ -96,6 +96,11 @@ effects:
 # jahan English caption hota hai wo kat jata hai). Video band 3:4 (1080x1440)
 # rehta hai, upar-neeche white canvas - Instagram-style look.
 
+# ---------------- On-screen TOP headline ----------------
+overlay:
+  enabled: true        # video ke UPAR (white area me) mazedaar headline
+                       # dikhana - Gemini har video ke liye banata hai
+
 # ---------------- On-screen captions ----------------
 captions:
   enabled: false       # on-screen captions ON/OFF (abhi OFF). true karne pe

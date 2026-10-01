@@ -2,14 +2,17 @@
 Gemini video analysis -> Hindi narration script + HINGLISH title/description.
 
 Video Gemini Files API se upload hoti hai, phir model se JSON response
-manga jata hai: {title, description, hashtags, tags, script, captions}
+manga jata hai: {title, description, hashtags, tags, script, captions, top_text}
  - title      : HINGLISH (Roman letters) catchy title - YouTube pe aise hi
                 dikhta hai (Devanagari nahi)
  - description: HINGLISH (Roman) 2-3 lines; hashtags alag field me aate
                 hain aur main.py unhe description ke end me jodta hai
  - hashtags   : 8-10 hashtags (# ke saath) - evergreen + topic-specific
  - tags       : 12-15 YouTube tags (bina #) - topic-specific keywords
- - script     : Devanagari Hindi, video ki duration se match (TTS bolti hai)
+ - script     : Devanagari Hindi, video ki duration se match (TTS bolti hai).
+                Aakhir me subscribe CTA zaroor hota hai.
+ - top_text   : video ke UPAR dikhne wali chhoti MAZEDAAR Hinglish line
+                (Roman letters) - headline/hook
  - captions   : wahi script ka HINGLISH (Roman) version - on-screen captions
                 ke liye (config se on/off)
 
@@ -49,6 +52,7 @@ Return ONLY a JSON object with exactly these keys:
   "description": "2-3 line HINGLISH description - Roman/Latin letters me. Video ka topic clear ho, engaging ho, aur end me ek soft CTA (jaise 'aisi videos ke liye follow karo'). Is field me hashtags NA daalo - wo alag se bhejo. Devanagari BILKUL NAHI.",
   "hashtags": ["8-10 hashtags ki list, har ek # se shuru (jaise '#shorts', '#facts') - '#shorts' aur '#facts' zaroor, phir video ke topic ke 3-4 specific hashtags (jaise '#ocean', '#fish'), aur 2-3 evergreen (jaise '#viral', '#hindifacts'). Hashtag me space nahi."],
   "tags": ["12-15 YouTube tags ki list (bina # symbol, lowercase) - video ke topic ke specific keywords Hinglish/Hindi/English me (jaise 'facts in hindi', 'samundar ke raaz', 'amazing facts in hindi')."],
+  "top_text": "video ke UPAR dikhane ke liye ek chhoti MAZEDAAR Hinglish line - Roman/Latin letters me, max 40 characters. Ye ek hook/headline ho jo video dekhne ki curiosity jagaye (jaise 'Ye machhli ne kya kar diya!' ya 'Samundar ka ye raaz dekho!'). Max 1 emoji. Devanagari letters BILKUL NAHI.",
   "script": "poora Hindi narration script, Devanagari me",
   "captions": "wahi script ka HINGLISH version - Latin/Roman letters me likha hua (jaise: 'yeh dekho kya ho raha hai', 'aap yeh dekh sakte hain'). Sirf Latin letters use karo, Devanagari letters BILKUL NAHI. Same words, same order - bas script ko Roman me likha hua. Ye on-screen captions ke liye hai."
 }}
@@ -57,7 +61,9 @@ Script rules:
 - Script video me jo ACTUALLY dikh raha hai usi par based ho - kuch mat banao.
 - Spoken Hindi ~2.5 words per second hoti hai, isliye target ~{words} words.
 - Pehle 2 second me ek strong attention-grabbing hook line.
-- End me ek soft CTA (jaise "aisi hi videos ke liye follow karo").
+- End me ek strong SUBSCRIBE CTA zaroor - natural Hindi me, jaise "aur haan,
+  agar aapko aisi videos pasand aati hain to channel ko subscribe karna mat
+  bhoolna". Ye aakhri line hogi.
 - IMPORTANT: script ek hi continuous flow me likho - koi ellipses (...),
   dashes (-, --), ya line breaks NAHI. Chhoti natural sentences.
 """
@@ -92,6 +98,9 @@ def _validate(analysis):
             analysis[key] = [p.strip() for p in str(val).split() if p.strip()]
         else:
             analysis[key] = []
+    # top_text (video ke upar wala headline) optional - na mile to ""
+    if not str(analysis.get("top_text") or "").strip():
+        analysis["top_text"] = ""
 
 
 def _is_permanent_error(err_str):

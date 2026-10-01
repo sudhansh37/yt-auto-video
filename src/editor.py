@@ -12,7 +12,9 @@ ffmpeg editor v5 - Hindi Short banata hai:
   7. Background music (halki, copyright-free ffmpeg synth) - sirf Hindi TTS
      voice ke saath. Original English audio BILKUL mix NAHI hota (feature
      poora hata diya gaya hai - audio 100% Hindi rehna chahiye).
-  8. TIME-SYNCED HINGLISH CAPTIONS - jo script Gemini likhta hai (jo voice
+  8. UPAR white area me MAZEDAAR Hinglish headline (top_text) - video ke
+     baare me chhoti catchy line (config se on/off).
+  9. TIME-SYNCED HINGLISH CAPTIONS - jo script Gemini likhta hai (jo voice
      bolti hai) wahi text video pe bottom me white-on-black dikhta hai.
      Captions HINGLISH (Roman letters) me hoti hain - Devanagari text aaye
      to Devanagari font automatically use hota hai.
@@ -227,12 +229,36 @@ def _slow_music_source():
     return f"aevalsrc='{expr}':s=44100"
 
 
-def edit_video(src, audio, out_path, variant, effects_cfg, script=None):
+def _top_text_filters(text, workdir):
+    """Video ke UPAR (white canvas me) MAZEDAAR headline draw karo.
+
+    Text upar wale white band (0..240px) me center hota hai aur lambai ke
+    hisaab se font size chhota hota hai (overflow na ho). Hinglish (Roman)
+    ya Devanagari - font auto choose hota hai.
+    """
+    text = " ".join(str(text).split())[:48]
+    if not text:
+        return ""
+    font = _find_caption_font(text)
+    size = 54 if len(text) <= 26 else (46 if len(text) <= 34 else 38)
+    tf = workdir / "top_text.txt"
+    tf.write_text(text, encoding="utf-8")
+    return (
+        f"drawtext=fontfile={font}:textfile={tf.as_posix()}"
+        f":fontcolor=black:fontsize={size}:x=(w-text_w)/2:y=(240-text_h)/2"
+    )
+
+
+def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
+               top_text=None):
     """Source video + TTS audio se final 9:16 Short banao. Output path return.
 
     script diya to time-synced captions bhi lagti hain (Hinglish ya
     Devanagari - text ke hisaab se font khud choose hota hai). Jo voice
     bolti hai wahi text video pe dikhta hai.
+
+    top_text diya to video ke UPAR (white area me) ek mazedaar headline
+    dikhta hai - video ke baare me ek chhoti catchy line.
 
     AUDIO: sirf Hindi TTS voice (loudnorm) + halki background music.
     Original English audio kabhi mix NAHI hota.
@@ -268,6 +294,10 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None):
         # 7. white canvas (upar-neeche background)
         f"pad={TARGET_W}:{TARGET_H}:0:{pad_y}:white,"
     )
+
+    # 7.5 video ke UPAR mazedaar headline (agar diya gaya ho)
+    if top_text:
+        vf += _top_text_filters(top_text, out_path.parent) + ","
 
     # 8. time-synced captions (Hinglish ya Devanagari - font auto)
     if script:

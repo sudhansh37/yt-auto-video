@@ -219,10 +219,16 @@ def main():
             caption_text = analysis["script"]
         else:
             caption_text = analysis["captions"]
+    # video ke UPAR mazedaar headline (config se on/off) - analyzer se aata hai
+    ov_cfg = cfg.get("overlay") or {}
+    top_text = None
+    if ov_cfg.get("enabled", True):
+        top_text = str(analysis.get("top_text") or "").strip() or None
     out = edit_video(src, audio, work / "final.mp4", variant, cfg["effects"],
-                     script=caption_text)
+                     script=caption_text, top_text=top_text)
     print(f"Edit complete (effect={variant}, "
-          f"captions={'on' if caption_text else 'off'}) -> {out.name}")
+          f"captions={'on' if caption_text else 'off'}, "
+          f"top-text={'on' if top_text else 'off'}) -> {out.name}")
 
     # ---- 6. upload se PEHLE history + pending log (KILL-SAFE) ----
     # Agar run upload ke dauran/beech me kill ho jaye (timeout aadi), to bhi:
