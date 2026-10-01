@@ -208,27 +208,34 @@ def main():
     audio = synthesize(analysis["script"], cfg["tts"], work / "voice.mp3")
     print(f"Hindi voice ready: {audio.name}")
 
-    # ---- 4.5 ORIGINAL VOICEOVER save karo (final me 10% pe mix hogi) ----
-    # Source video ki asli awaaz extract karke save karo. Edit ke waqt ye
-    # 10% volume pe Hindi TTS (100%) ke neeche mix hoti hai.
-    print("Original voiceover save ho rahi hai...")
-    orig_voice = extract_audio(src, work / "original_voice.m4a")
-    if orig_voice:
-        print(f"Original voice ready: {orig_voice.name}")
-    else:
-        print("Original voice nahi mili - edit me music fallback use hoga.")
+    # ---- 4.5 ORIGINAL VOICEOVER (config se on/off; abhi OFF) ----
+    # orig_voice_volume > 0 ho to source ki original awaaz extract karke
+    # final me usi volume pe mix hoti hai. 0 (default abhi) ho to extract
+    # hi nahi karte - sirf Hindi TTS (ya music fallback) chalta hai.
+    orig_voice = None
+    if float(cfg["effects"].get("orig_voice_volume", 0.0)) > 0:
+        print("Original voiceover save ho rahi hai...")
+        orig_voice = extract_audio(src, work / "original_voice.m4a")
+        if orig_voice:
+            print(f"Original voice ready: {orig_voice.name}")
+        else:
+            print("Original voice nahi mili - edit me music fallback use hoga.")
 
-    # ---- 5. edit: crop + effects + music + HINGLISH CAPTIONS ----
+    # ---- 5. edit: crop + effects + CAPTIONS (config se on/off) ----
     variant = random.choice(cfg["effects"]["variants"])
-    # on-screen captions: HINGLISH (roman) - Devanagari sirf voice ke liye
-    cap_lang = (cfg.get("captions") or {}).get("language", "hinglish")
-    if cap_lang == "devanagari" or not str(analysis.get("captions") or "").strip():
-        caption_text = analysis["script"]
-    else:
-        caption_text = analysis["captions"]
+    # on-screen captions: config me captions.enabled false ho to OFF
+    cap_cfg = cfg.get("captions") or {}
+    caption_text = None
+    if cap_cfg.get("enabled", True):
+        cap_lang = cap_cfg.get("language", "hinglish")
+        if cap_lang == "devanagari" or not str(analysis.get("captions") or "").strip():
+            caption_text = analysis["script"]
+        else:
+            caption_text = analysis["captions"]
     out = edit_video(src, audio, work / "final.mp4", variant, cfg["effects"],
                      script=caption_text, orig_audio=orig_voice)
-    print(f"Edit complete (effect={variant}, captions={cap_lang}, "
+    print(f"Edit complete (effect={variant}, "
+          f"captions={'on' if caption_text else 'off'}, "
           f"orig-voice={bool(orig_voice)}) -> {out.name}")
 
     # ---- 6. upload se PEHLE history + pending log (KILL-SAFE) ----
@@ -243,14 +250,40 @@ def main():
     log_publish("pending", channel)
 
     # ---- 7. YouTube upload ("AI use" disclosure auto-on) ----
+    # Title: HINGLISH (analyzer se) + #Shorts
     title = analysis["title"]
     if "#shorts" not in title.lower():
         title = f"{title} #Shorts"
+
+    # Description: HINGLISH lines + hashtags end me (analyzer alag field me
+    # deta hai). YouTube 15+ hashtags ignore kar deta hai, isliye max 12.
+    desc = str(analysis["description"]).strip()
+    hashtags = analysis.get("hashtags") or []
+    if hashtags:
+        desc = desc + "\n\n" + " ".join(hashtags[:12])
+
+    # Tags: Gemini ke per-video (topic-specific) tags + config ke base tags
+    # (order-preserving unique). YouTube total ~500 chars limit rakhta hai.
+    seen, tags = set(), []
+    for t in list(analysis.get("tags") or []) + list(cfg["youtube"].get("tags", [])):
+        t = str(t).strip()
+        if t and t.lower() not in seen:
+            seen.add(t.lower())
+            tags.append(t)
+    trimmed, total = [], 0
+    for t in tags:
+        if total + len(t) + 1 > 480:   # 500 char limit se thoda kam
+            break
+        trimmed.append(t)
+        total += len(t) + 1
+    tags = trimmed
+
     yt_id = upload_video(
-        out, title, analysis["description"],
-        cfg["youtube"].get("tags", []), cfg["youtube"], channel=channel,
+        out, title, desc,
+        tags, cfg["youtube"], channel=channel,
     )
-    print(f"YouTube (channel {channel}) pe upload ho gaya.")
+    print(f"YouTube (channel {channel}) pe upload ho gaya "
+          f"({len(hashtags)} hashtags, {len(tags)} tags).")
 
     # ---- 8. pending entry ko real video id se confirm karo ----
     confirm_pending_publish(yt_id, channel)

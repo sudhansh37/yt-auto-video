@@ -1,13 +1,17 @@
 """
-Gemini video analysis -> Hindi narration script + title + description.
+Gemini video analysis -> Hindi narration script + HINGLISH title/description.
 
 Video Gemini Files API se upload hoti hai, phir model se JSON response
-manga jata hai: {"title", "description", "script"}
- - script   : Devanagari Hindi, video ki duration se match (TTS bolti hai)
-              aur editor isi se time-synced captions banata hai
- - captions : wahi script ka HINGLISH (Roman letters) version - isse
-              on-screen captions banti hain (Devanagari nahi). Model
-              na de to editor script par fallback kar deta hai.
+manga jata hai: {title, description, hashtags, tags, script, captions}
+ - title      : HINGLISH (Roman letters) catchy title - YouTube pe aise hi
+                dikhta hai (Devanagari nahi)
+ - description: HINGLISH (Roman) 2-3 lines; hashtags alag field me aate
+                hain aur main.py unhe description ke end me jodta hai
+ - hashtags   : 8-10 hashtags (# ke saath) - evergreen + topic-specific
+ - tags       : 12-15 YouTube tags (bina #) - topic-specific keywords
+ - script     : Devanagari Hindi, video ki duration se match (TTS bolti hai)
+ - captions   : wahi script ka HINGLISH (Roman) version - on-screen captions
+                ke liye (config se on/off)
 
 GEMINI FALLBACK KEYS:
   - GEMINI_API_KEY pehle try hota hai; uska quota khatam ho jaye
@@ -35,28 +39,27 @@ from google import genai
 from google.genai import types
 
 PROMPT = """\
-You are a professional Hindi YouTube Shorts narrator and scriptwriter.
+You are a professional Hindi YouTube Shorts scriptwriter and SEO expert.
 
 Watch this video carefully. It is roughly {duration} seconds long.
-Write a Hindi narration script (in Devanagari script, natural spoken Hindi,
-simple aur engaging bhasha) jo video me jo dikhaya/sunaya gaya hai use
-start se end tak explain kare, video ke pace ke saath.
 
-Rules:
+Return ONLY a JSON object with exactly these keys:
+{{
+  "title": "catchy HINGLISH title - Roman/Latin letters me likho (jaise 'Ye machhli ne kya kar diya!'). Max 90 characters, ek attention-grabbing hook + max 1 emoji. Devanagari letters BILKUL NAHI.",
+  "description": "2-3 line HINGLISH description - Roman/Latin letters me. Video ka topic clear ho, engaging ho, aur end me ek soft CTA (jaise 'aisi videos ke liye follow karo'). Is field me hashtags NA daalo - wo alag se bhejo. Devanagari BILKUL NAHI.",
+  "hashtags": ["8-10 hashtags ki list, har ek # se shuru (jaise '#shorts', '#facts') - '#shorts' aur '#facts' zaroor, phir video ke topic ke 3-4 specific hashtags (jaise '#ocean', '#fish'), aur 2-3 evergreen (jaise '#viral', '#hindifacts'). Hashtag me space nahi."],
+  "tags": ["12-15 YouTube tags ki list (bina # symbol, lowercase) - video ke topic ke specific keywords Hinglish/Hindi/English me (jaise 'facts in hindi', 'samundar ke raaz', 'amazing facts in hindi')."],
+  "script": "poora Hindi narration script, Devanagari me",
+  "captions": "wahi script ka HINGLISH version - Latin/Roman letters me likha hua (jaise: 'yeh dekho kya ho raha hai', 'aap yeh dekh sakte hain'). Sirf Latin letters use karo, Devanagari letters BILKUL NAHI. Same words, same order - bas script ko Roman me likha hua. Ye on-screen captions ke liye hai."
+}}
+
+Script rules:
 - Script video me jo ACTUALLY dikh raha hai usi par based ho - kuch mat banao.
 - Spoken Hindi ~2.5 words per second hoti hai, isliye target ~{words} words.
 - Pehle 2 second me ek strong attention-grabbing hook line.
 - End me ek soft CTA (jaise "aisi hi videos ke liye follow karo").
 - IMPORTANT: script ek hi continuous flow me likho - koi ellipses (...),
   dashes (-, --), ya line breaks NAHI. Chhoti natural sentences.
-
-Return ONLY a JSON object with exactly these keys:
-{{
-  "title": "catchy Hindi title (Devanagari), max 90 characters",
-  "description": "2-3 line Hindi description (Devanagari) + neeche 8-10 hashtags mix karo: #shorts #facts #viral #hindifacts #amazingfacts ke saath video ke topic ke 4-5 specific hashtags",
-  "script": "poora Hindi narration script, Devanagari me",
-  "captions": "Wahi script ka HINGLISH version - Latin/Roman letters me likha hua (jaise: 'yeh dekho kya ho raha hai', 'aap yeh dekh sakte hain'). Sirf Latin letters use karo, Devanagari letters BILKUL NAHI. Same words, same order - bas script ko Roman me likha hua. Ye on-screen captions ke liye hai."
-}}
 """
 
 # 503 "high demand" fail hone pe ye fallback models try hote hain
@@ -76,10 +79,19 @@ def _validate(analysis):
     for key in ("title", "description", "script"):
         if key not in analysis or not str(analysis[key]).strip():
             raise ValueError(f"Gemini response me '{key}' missing/khali hai.")
-    # 'captions' (Hinglish) optional hai - na mile to editor Devanagari
-    # script par fallback kar dega, run fail nahi hota.
+    # 'captions' (Hinglish) optional hai - na mile to editor script par
+    # fallback kar dega, run fail nahi hota.
     if not str(analysis.get("captions") or "").strip():
         analysis["captions"] = ""
+    # hashtags / tags bhi optional - na mile ya galat type ho to [] kar do
+    for key in ("hashtags", "tags"):
+        val = analysis.get(key)
+        if isinstance(val, list):
+            analysis[key] = [str(v).strip() for v in val if str(v).strip()]
+        elif val:
+            analysis[key] = [p.strip() for p in str(val).split() if p.strip()]
+        else:
+            analysis[key] = []
 
 
 def _is_permanent_error(err_str):

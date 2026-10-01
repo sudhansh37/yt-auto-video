@@ -86,11 +86,11 @@ effects:
   brightness: 0.04     # thoda bright (0 = normal, 0.10 = kaafi bright)
   sharpen: 1.0         # sharpness / crisp look (0 = band, 1.5 = bahut sharp)
   video_speed: 1.12    # video thodi tez (1.0 = normal, 1.3 = bahut tez)
-  orig_voice_volume: 0.10  # ORIGINAL VOICEOVER volume (source video ki asli
-                          # awaaz) - Hindi TTS 100% pe rehti hai. 0 karoge to
-                          # original awaaz band ho jayegi (phir music fallback)
-  bgm_volume: 0.10     # (sirf fallback) original audio na mile to ye slow
-                        # background music chalti hai (0 = band, 0.20 = zyada)
+  orig_voice_volume: 0.0   # ORIGINAL (English) VOICEOVER - ABHI OFF.
+                          # Chahiye to 0.10 kar do (Hindi TTS ke neeche halki
+                          # background me mix ho jayegi).
+  bgm_volume: 0.10     # background music (original voice OFF hone pe ye
+                       # chalti hai; 0 = band, 0.20 = zyada)
   # preset: "medium"    # (optional) low-memory machine pe "ultrafast" + threads: 1
   # threads: 1          # GitHub Actions ke liye kuch nahi badalna
 
@@ -100,6 +100,8 @@ effects:
 
 # ---------------- On-screen captions ----------------
 captions:
+  enabled: false       # on-screen captions ON/OFF (abhi OFF). true karne pe
+                       # neeche wali language use hoti hai
   # "hinglish"  -> captions Roman letters me (jaise "aap dekh sakte hain")
   # "devanagari" -> captions Devanagari (Hindi) me
   language: "hinglish"
@@ -108,6 +110,8 @@ captions:
 youtube:
   privacy: "public"      # public / unlisted / private
   category_id: "27"      # 27 = Education
+  # BASE tags (fallback). Gemini har video ke liye topic-specific tags bhi
+  # deta hai - dono merge hote hain (Gemini wale pehle).
   tags: ["hindi facts", "shorts", "facts in hindi", "amazing facts", "viral facts"]
   # "AI use" disclosure - upload ke waqt hi Studio ka AI toggle automatically
   # Yes ho jata hai (containsSyntheticMedia). Band karna ho to false karo.

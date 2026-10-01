@@ -9,10 +9,10 @@ ffmpeg editor v5 - Hindi Short banata hai:
   4. Color grade: saturation + contrast + brightness
   5. Sharpness (unsharp)
   6. Video thodi tez + voice loudness normalize
-  7. ORIGINAL VOICEOVER (source video ki asli awaaz) 10% volume pe mix
-     hoti hai - extract_audio() usko pehle save karta hai. Hindi TTS
-     voice 100% pe rehti hai. Original audio na mile to copyright-free
-     slow music fallback.
+  7. ORIGINAL VOICEOVER (source video ki asli awaaz) - config se on/off
+     (orig_voice_volume). > 0 ho to extract_audio() usko save karta hai aur
+     usi volume pe mix hoti hai; Hindi TTS 100% pe rehti hai. ABHI OFF hai
+     (0.0) - tab Hindi TTS (ya music) hi chalta hai.
   8. TIME-SYNCED HINGLISH CAPTIONS - jo script Gemini likhta hai (jo voice
      bolti hai) wahi text video pe bottom me white-on-black dikhta hai.
      Captions HINGLISH (Roman letters) me hoti hain - Devanagari text aaye
