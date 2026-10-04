@@ -86,16 +86,29 @@ jobs:
       - name: Save history + publish log
         # always() = pipeline fail/retry ho tab bhi jitna data bana hai
         # (history, pending log entry) wo commit ho jaye - warna watchdog
-        # slot ko miss samajh kar DUPLICATE upload kar deta tha
+        # slot ko miss samajh kar DUPLICATE upload kar deta tha.
+        #
+        # CONFLICT-SAFE: job ke dauraan remote 'main' aage badh sakta hai
+        # (watchdog/dusra run push kar chuka hota hai). Pehle `git pull
+        # --rebase` JSON files ko auto-merge nahi kar paata tha -> CONFLICT
+        # -> run RED. Ab pehle merge_data.py se apne + remote data ka UNION
+        # banate hain, phir seedha remote tip par commit karte hain.
         if: always()
         run: |
           git config user.name  "shorts-bot"
           git config user.email "action@github.com"
+
+          # remote ka naya data apne working files me union-merge karo
+          # (kuch bhi lost nahi hota, aur rebase/conflict nahi aata)
+          git fetch --quiet origin main
+          python src/merge_data.py --remote origin/main
+
+          # HEAD + index ko remote tip par le jao (working tree safe rehta hai)
+          git reset --quiet origin/main
           git add data/history.json data/publish_log.json
           if git diff --cached --quiet; then
             echo "No change - skip commit"
           else
             git commit -m "chore: mark video as used [skip ci]"
-            git pull --rebase origin main
-            git push
+            git push origin main
           fi
