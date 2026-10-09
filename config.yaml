@@ -41,7 +41,9 @@ tts:
     model: "gemini-2.5-flash-preview-tts"
     # Male:   Puck (energetic), Charon (informative), Fenrir (excitable), Orus (firm)
     # Female: Kore, Aoede, Leda, Zephyr
-    voice: "Puck"
+    # NOTE: ek hi voice poore video me use hoti hai (beech me change nahi hoti).
+    # Badalna ho to sirf yahan naam badlo.
+    voice: "Charon"
     style: "Say in an energetic, engaging and clear YouTube shorts narrator tone, speaking natural Hindi:"
 
   ttsfree:
@@ -80,12 +82,20 @@ effects:
   variants: [zoom_in, pan_up, pan_down, pan_left, pan_right, ken_burns]
   # Zoom/pan kitna strong ho (0.15 = halka, 0.28 = clearly visible, 0.40 = bahut zyada)
   zoom_amount: 0.30
-  # Color grade
+  # Color grade (brightness/contrast/exposure badhaye)
   saturation: 1.28     # vibrant colors
-  contrast: 1.12       # punchy blacks
-  brightness: 0.04     # thoda bright (0 = normal, 0.10 = kaafi bright)
+  contrast: 1.20       # punchy blacks
+  brightness: 0.08     # thoda bright
+  exposure: 0.05       # halka exposure boost (0 = off)
   sharpen: 1.0         # sharpness / crisp look (0 = band, 1.5 = bahut sharp)
   video_speed: 1.12    # video thodi tez (1.0 = normal, 1.3 = bahut tez)
+  # ---- LOOK (background + red line - screenshot jaisa) ----
+  canvas_color: "black"       # background (upar/neeche ka area)
+  border_color: "red"         # video aur background ke beech ki patli line
+  border_width: 4             # line ki thickness (pixels)
+  border_top: true            # line video ke UPAR (screenshot jaisa)
+  border_bottom: false        # neeche bhi chahiye to true kar do
+  overlay_text_color: "white" # upar wale headline ka colour (black bg pe white)
   # ---- VIDEO QUALITY (MAX) ----
   crf: 13              # x264 quality - JITNA KAM, UTNI BEHTAR (0 = lossless,
                        # 13 = near-lossless, 18 = high, 23 = default)
@@ -106,11 +116,11 @@ effects:
 
 # NOTE: crop TOP se anchor hota hai (upar ka content safe, bottom ka hissa
 # jahan English caption hota hai wo kat jata hai). Video band 3:4 (1080x1440)
-# rehta hai, upar-neeche white canvas - Instagram-style look.
+# rehta hai, upar-neeche background canvas_color (abhi black) + top pe red line.
 
 # ---------------- On-screen TOP headline ----------------
 overlay:
-  enabled: true        # video ke UPAR (white area me) mazedaar headline
+  enabled: true        # video ke UPAR (background area me) mazedaar headline
                        # dikhana - Gemini har video ke liye banata hai
 
 # ---------------- On-screen captions ----------------
