@@ -11,12 +11,15 @@ ffmpeg editor v5 - Hindi Short banata hai:
   6. Video thodi tez + voice loudness normalize
   7. QUALITY: x264 CRF 13 (near-lossless) + preset slow + 256k audio
      (config.yaml me crf / preset / audio_bitrate se control hota hai)
-  8. Background music (halki, copyright-free ffmpeg synth) - sirf Hindi TTS
+  8. LOW-RES AUTO-ENHANCE: agar source 1080px se kam ho (720p/480p...)
+     to output automatic crisp 1080p ban jata hai - CAS (contrast-adaptive
+     sharpening) + extra unsharp. 1080+ sources pe kuch extra nahi hota.
+  9. Background music (halki, copyright-free ffmpeg synth) - sirf Hindi TTS
      voice ke saath. Original English audio BILKUL mix NAHI hota (feature
      poora hata diya gaya hai - audio 100% Hindi rehna chahiye).
-  9. UPAR white area me MAZEDAAR Hinglish headline (top_text) - video ke
+ 10. UPAR white area me MAZEDAAR Hinglish headline (top_text) - video ke
      baare me chhoti catchy line (config se on/off).
- 10. TIME-SYNCED HINGLISH CAPTIONS - jo script Gemini likhta hai (jo voice
+ 11. TIME-SYNCED HINGLISH CAPTIONS - jo script Gemini likhta hai (jo voice
      bolti hai) wahi text video pe bottom me white-on-black dikhta hai.
      Captions HINGLISH (Roman letters) me hoti hain - Devanagari text aaye
      to Devanagari font automatically use hota hai.
@@ -79,6 +82,49 @@ def _parse_duration_from_stderr(stderr):
         raise RuntimeError("Duration parse nahi hui (ffprobe bhi nahi mila).")
     h, mnt, s = int(m.group(1)), int(m.group(2)), float(m.group(3))
     return h * 3600 + mnt * 60 + s
+
+
+def get_dimensions(path):
+    """Video ki (width, height) - ffprobe se, warna ffmpeg -i ke stderr se."""
+    if shutil.which("ffprobe"):
+        out = _run([
+            "ffprobe", "-v", "error", "-select_streams", "v:0",
+            "-show_entries", "stream=width,height", "-of", "json", str(path),
+        ])
+        streams = json.loads(out.stdout).get("streams") or []
+        if streams:
+            return int(streams[0]["width"]), int(streams[0]["height"])
+    # fallback: ffmpeg -i ka stderr parse karo
+    result = subprocess.run(
+        [FFMPEG, "-hide_banner", "-i", str(path)],
+        capture_output=True, text=True,
+    )
+    m = re.search(r"Video:.*?\s(\d{2,5})x(\d{2,5})", result.stderr)
+    if not m:
+        raise RuntimeError("Video resolution parse nahi hui.")
+    return int(m.group(1)), int(m.group(2))
+
+
+_FILTER_CACHE = {}
+
+
+def _has_filter(name):
+    """Is ffmpeg build me filter available hai? (ek baar check, phir cache).
+
+    Zaroori hai kyunki 'cas' jaisa filter har build me nahi hota - na ho to
+    render fail hone ke bajaye sirf unsharp se kaam chal jata hai.
+    """
+    if name not in _FILTER_CACHE:
+        try:
+            r = subprocess.run(
+                [FFMPEG, "-hide_banner", "-h", f"filter={name}"],
+                capture_output=True, text=True,
+            )
+            _FILTER_CACHE[name] = (r.returncode == 0
+                                   and f"Filter {name}" in (r.stdout + r.stderr))
+        except Exception:  # noqa: BLE001
+            _FILTER_CACHE[name] = False
+    return _FILTER_CACHE[name]
 
 
 def get_duration(path):
@@ -276,6 +322,18 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
     total_frames = int(out_duration * FPS) + 1
     pad_y = (TARGET_H - BAND_H) // 2   # 240px white upar + neeche
 
+    # ---- LOW-RES AUTO-ENHANCE (detect) ----
+    # source ki width 1080 se kam (720p/480p...) hai? To band 1080x1440 pe
+    # upscale hoga aur soft dikhega - us case me auto-enhance chalega taaki
+    # output crisp 1080p lage. 1080+ sources pe kuch extra nahi hota.
+    src_w, src_h = get_dimensions(src)
+    threshold = int(effects_cfg.get("lowres_threshold", 1080))
+    enhance = (bool(effects_cfg.get("enhance_lowres", True))
+               and src_w < threshold)
+    if enhance:
+        print(f"  [editor] Low-res source {src_w}x{src_h} (< {threshold}px "
+              f"width) - auto 1080p enhancement ON")
+
     vf = (
         # 1. video thodi tez (speed)
         f"setpts=PTS/{speed},"
@@ -296,6 +354,16 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
         # 7. white canvas (upar-neeche background)
         f"pad={TARGET_W}:{TARGET_H}:0:{pad_y}:white,"
     )
+
+    # ---- LOW-RES AUTO-ENHANCE (upscaled content ko crisp 1080p look) ----
+    # CAS = contrast-adaptive sharpening (upscaled video ke liye best).
+    # 'cas' filter na ho to sirf extra unsharp chalta hai (render fail nahi hota).
+    if enhance:
+        parts = []
+        if _has_filter("cas"):
+            parts.append(f"cas=strength={effects_cfg.get('lowres_cas', 0.6)}")
+        parts.append(f"unsharp=7:7:{effects_cfg.get('lowres_sharpen', 1.2)}")
+        vf += ",".join(parts) + ","
 
     # 7.5 video ke UPAR mazedaar headline (agar diya gaya ho)
     if top_text:

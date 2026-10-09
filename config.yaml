@@ -92,6 +92,13 @@ effects:
   preset: "slow"       # x264 speed/quality - slow = behtar quality (medium =
                        # default, veryslow = aur behtar par bahut dheema)
   audio_bitrate: "256k"  # awaaz ki quality (128k normal, 256k high)
+  # ---- LOW-RES AUTO-ENHANCE ----
+  # Agar source ki width is threshold se KAM ho (720p/480p...) to output
+  # automatic crisp 1080p ban jata hai - CAS sharpening + extra unsharp.
+  enhance_lowres: true   # auto-enhance on/off
+  lowres_threshold: 1080 # is width se kam hone par enhance chalta hai
+  lowres_cas: 0.6        # contrast-adaptive sharpening (0 = off, 1 = max)
+  lowres_sharpen: 1.2    # low-res sources ke liye extra unsharp
   bgm_volume: 0.10     # halki background music (0 = band, 0.20 = zyada).
                        # NOTE: original English audio kabhi mix nahi hota -
                        # audio 100% Hindi (TTS) rehta hai.
