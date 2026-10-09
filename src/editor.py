@@ -30,6 +30,7 @@ Noto Sans Devanagari Bold (CI pe fonts-noto-core package se aata hai).
 Har chunk apne time-window me dikhta hai.
 """
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -277,12 +278,12 @@ def _slow_music_source():
     return f"aevalsrc='{expr}':s=44100"
 
 
-def _top_text_filters(text, workdir, color="white"):
-    """Video ke UPAR (background area me) MAZEDAAR headline draw karo.
+def _top_text_filters(text, workdir, color="yellow", border=4,
+                      outline="black"):
+    """FALLBACK: drawtext se headline (jab PIL/emoji font na ho).
 
-    Text upar wale band (0..240px) me center hota hai aur lambai ke
-    hisaab se font size chhota hota hai (overflow na ho). Hinglish (Roman)
-    ya Devanagari - font auto choose hota hai.
+    Bold + outline look (screenshot jaisa). Emoji nahi aata - isliye jab
+    possible ho to _headline_png() use hota hai.
     """
     text = " ".join(str(text).split())[:48]
     if not text:
@@ -294,7 +295,96 @@ def _top_text_filters(text, workdir, color="white"):
     return (
         f"drawtext=fontfile={font}:textfile={tf.as_posix()}"
         f":fontcolor={color}:fontsize={size}:x=(w-text_w)/2:y=(240-text_h)/2"
+        f":borderw={int(border)}:bordercolor={outline}"
     )
+
+
+def _headline_png(text, workdir, color="yellow", outline="black",
+                  fontsize=64, max_width=1000):
+    """Headline ko transparent PNG me render karo (PIL) - COLOUR EMOJI ke saath.
+
+    ffmpeg drawtext colour emoji nahi dikhata (box aa jata hai), isliye
+    headline PIL se image me banti hai aur ffmpeg overlay se lagti hai.
+    Yellow bold text + black outline (screenshot jaisa) + emoji.
+    PIL/emoji font na mile to None return hota hai (drawtext fallback chalta hai).
+    """
+    try:
+        import glob as _glob
+
+        from PIL import Image, ImageDraw, ImageFont
+    except Exception:  # noqa: BLE001
+        return None
+
+    text = " ".join(str(text).split())
+    if not text:
+        return None
+
+    # aakhir me jo emoji/symbol hain unhe alag karo
+    i = len(text)
+    while i > 0 and ord(text[i - 1]) >= 0x2190:
+        i -= 1
+    main, emoji = text[:i].rstrip(), text[i:].strip()
+    if not main:
+        main, emoji = text, ""
+
+    try:
+        tfont = ImageFont.truetype(_find_caption_font(main or text), fontsize)
+    except Exception:  # noqa: BLE001
+        return None
+
+    # colour emoji font (CI pe fonts-noto-color-emoji se aata hai)
+    efont = None
+    if emoji:
+        cand = [os.environ.get("EMOJI_FONT") or "",
+                "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",
+                "/usr/share/fonts/**/NotoColorEmoji.ttf"]
+        for pat in cand:
+            if not pat:
+                continue
+            hits = [pat] if Path(pat).exists() else sorted(
+                _glob.glob(pat, recursive=True))
+            if hits:
+                try:
+                    efont = ImageFont.truetype(hits[0], 109)
+                except Exception:  # noqa: BLE001
+                    efont = None
+                break
+    if efont is None:
+        emoji = ""          # emoji font nahi -> emoji chhod do (box na aaye)
+
+    stroke = 5
+    probe = Image.new("RGBA", (10, 10))
+    d0 = ImageDraw.Draw(probe)
+    bb = d0.textbbox((0, 0), main, font=tfont, stroke_width=stroke)
+    tw, th = bb[2] - bb[0], bb[3] - bb[1]
+
+    eimg = None
+    ew = 0
+    if emoji:
+        try:
+            eimg = Image.new("RGBA", (260, 260), (0, 0, 0, 0))
+            ImageDraw.Draw(eimg).text((20, 20), emoji, font=efont,
+                                      embedded_color=True)
+            eimg = eimg.crop(eimg.getbbox())
+            target = int(fontsize * 1.15)
+            eimg = eimg.resize((target, target), Image.LANCZOS)
+            ew = target + 16
+        except Exception:  # noqa: BLE001
+            eimg, ew = None, 0
+
+    pad = 14
+    W = min(max_width, tw + ew + pad * 2)
+    H = max(th, fontsize) + pad * 2
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    dr = ImageDraw.Draw(img)
+    dr.text((pad - bb[0], pad - bb[1]), main, font=tfont, fill=color,
+            stroke_width=stroke, stroke_fill=outline)
+    if eimg is not None:
+        img.paste(eimg, (pad + tw + 16, (H - eimg.height) // 2), eimg)
+
+    out = workdir / "headline.png"
+    img.save(out)
+    return out
 
 
 def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
@@ -383,12 +473,22 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
         parts.append(f"unsharp=7:7:{effects_cfg.get('lowres_sharpen', 1.2)}")
         vf += ",".join(parts) + ","
 
-    # 7.5 video ke UPAR mazedaar headline (agar diya gaya ho)
+    # 7.5 video ke UPAR colourful headline (bold + outline + emoji)
+    headline_png = None
     if top_text:
-        vf += _top_text_filters(
+        headline_png = _headline_png(
             top_text, out_path.parent,
-            effects_cfg.get("overlay_text_color", "white"),
-        ) + ","
+            effects_cfg.get("overlay_text_color", "yellow"),
+            effects_cfg.get("overlay_text_outline", "black"),
+        )
+        if headline_png is None:
+            # PIL/emoji font na mila - drawtext fallback (bold + outline)
+            vf += _top_text_filters(
+                top_text, out_path.parent,
+                effects_cfg.get("overlay_text_color", "yellow"),
+                int(effects_cfg.get("overlay_text_border", 4)),
+                effects_cfg.get("overlay_text_outline", "black"),
+            ) + ","
 
     # 8. time-synced captions (Hinglish ya Devanagari - font auto)
     if script:
@@ -419,14 +519,25 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
     if bgm_volume > 0:
         cmd += ["-f", "lavfi", "-t", f"{out_duration + 2:.2f}",
                 "-i", _slow_music_source()]
+    if headline_png:
+        cmd += ["-loop", "1", "-i", str(headline_png)]
 
     # ---- QUALITY (max) - config se control hota hai ----
     crf = str(int(effects_cfg.get("crf", 13)))          # kam = behtar
     preset = effects_cfg.get("preset", "slow")           # slow = behtar
     audio_bitrate = effects_cfg.get("audio_bitrate", "256k")
 
+    # headline PNG hai to use overlay se lagao (colour emoji ke saath)
+    if headline_png:
+        hidx = 3 if bgm_volume > 0 else 2
+        vchain = (f"[0:v]{vf}[base];"
+                  f"[base][{hidx}:v]overlay="
+                  f"x=(main_w-overlay_w)/2:y=(240-overlay_h)/2:format=yuv420[v]")
+    else:
+        vchain = f"[0:v]{vf}[v]"
+
     cmd += [
-        "-filter_complex", f"[0:v]{vf}[v];{af}",
+        "-filter_complex", f"{vchain};{af}",
         "-map", "[v]",
         "-map", "[a]",
         "-c:v", "libx264",

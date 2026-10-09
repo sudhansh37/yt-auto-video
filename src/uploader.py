@@ -23,6 +23,14 @@ UPLOAD_URL = "https://www.googleapis.com/upload/youtube/v3/videos"
 IST = ZoneInfo("Asia/Kolkata")
 
 
+class AuthError(RuntimeError):
+    """Token refresh / auth fail - is channel ke secrets theek karne honge.
+
+    Ye upload shuru hone se PEHLE aata hai, isliye main.py is case me video
+    ko waste nahi karta (pending entry hata ke history se unmark kar deta hai).
+    """
+
+
 def _env_suffix(channel):
     """Channel 1 -> '' (purane naam), channel 2 -> '_2', ..."""
     return "" if channel == 1 else f"_{channel}"
@@ -60,7 +68,14 @@ def _refresh_access_token(channel=1):
         timeout=30,
     )
     if resp.status_code != 200:
-        raise RuntimeError(f"Token refresh error {resp.status_code}: {resp.text[:300]}")
+        name = "YT_REFRESH_TOKEN" + _env_suffix(channel)
+        raise AuthError(
+            f"Token refresh error {resp.status_code}: {resp.text[:300]}\n"
+            f"FIX: '{name}' expire/revoke ho gaya hai. Google Cloud Console me "
+            f"OAuth se naya refresh token banao aur repo secret '{name}' update "
+            f"karo. (Agar OAuth app 'Testing' mode me hai to token har ~7 din "
+            f"me expire hota hai - app ko 'Production' me publish kar do.)"
+        )
     return resp.json()["access_token"]
 
 

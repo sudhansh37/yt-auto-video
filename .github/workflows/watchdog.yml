@@ -74,7 +74,7 @@ jobs:
         if: steps.check.outputs.needed == 'true'
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg fonts-noto-core fonts-dejavu-core
+          sudo apt-get install -y -qq ffmpeg fonts-noto-core fonts-dejavu-core fonts-noto-color-emoji
 
       - name: Install Python packages
         if: steps.check.outputs.needed == 'true'

@@ -95,7 +95,9 @@ effects:
   border_width: 4             # line ki thickness (pixels)
   border_top: true            # line video ke UPAR (screenshot jaisa)
   border_bottom: false        # neeche bhi chahiye to true kar do
-  overlay_text_color: "white" # upar wale headline ka colour (black bg pe white)
+  overlay_text_color: "yellow"  # headline ka colour (screenshot jaisa)
+  overlay_text_outline: "black" # headline ke around outline
+  overlay_text_border: 4        # outline ki thickness
   # ---- VIDEO QUALITY (MAX) ----
   crf: 13              # x264 quality - JITNA KAM, UTNI BEHTAR (0 = lossless,
                        # 13 = near-lossless, 18 = high, 23 = default)
@@ -109,7 +111,7 @@ effects:
   lowres_threshold: 1080 # is width se kam hone par enhance chalta hai
   lowres_cas: 0.6        # contrast-adaptive sharpening (0 = off, 1 = max)
   lowres_sharpen: 1.2    # low-res sources ke liye extra unsharp
-  bgm_volume: 0.10     # halki background music (0 = band, 0.20 = zyada).
+  bgm_volume: 0.22     # background music volume (user: 20-25%). 0 = band
                        # NOTE: original English audio kabhi mix nahi hota -
                        # audio 100% Hindi (TTS) rehta hai.
   # threads: 1          # (optional) low-memory machine ke liye - CI pe nahi badalna

@@ -59,9 +59,13 @@ Return ONLY a JSON object with exactly these keys:
 
 Script rules (STORY-TELLING STYLE - jaise kisi dost ko kahani suna rahe ho):
 - Script video me jo ACTUALLY dikh raha hai usi par based ho - kuch mat banao.
-- Pehli line ek CASUAL HOOK ho jo viewer ko seedha address kare, jaise:
-  "भाई, जानवरों में भी ऐसा होता है क्या?" ya "भाई सुनो, यहाँ क्या हुआ".
-  Halka curious/shocking tone.
+- PEHLI LINE = STRONG HOOK (sabse zaroori - isi se viewer rukta hai).
+  Hook pehle 3-4 shabd me hi curiosity ya sawal khada kar de. Examples:
+  "भाई, ये कैसे हुआ?", "भाई, जानवरों में भी ऐसा होता है क्या?",
+  "रुको, ये देखो क्या हुआ!", "भाई सुनो, ये सच में हुआ था!".
+  Hook me SAWAL ya SHOCKING baat ho - flat/seedhi shuruaat BILKUL mana
+  hai (jaise "aaj hum baat karenge" ya "is video me dekhenge" type lines
+  NAHI likhni).
 - Phir poori baat DOST KI TARAH sunao - connectors use karo jaise:
   "दरअसल", "और फिर", "जो शायद", "और कुछ ही दिनों में".
 - Bhasha: simple spoken Hindi (Devanagari), roz-marra ke shabd - jaise

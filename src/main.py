@@ -43,6 +43,7 @@ from editor import edit_video, get_duration   # noqa: E402
 from history import load_history, mark_used, save_history, trim_history  # noqa: E402
 from tts import synthesize                    # noqa: E402
 from uploader import channel_configured, upload_video, count_today_uploads  # noqa: E402
+from uploader import AuthError                # noqa: E402
 
 IST = ZoneInfo("Asia/Kolkata")
 MAX_PER_DAY = 2   # har channel ke liye SIRF itni videos (10:00 / 15:00 slots)
@@ -101,6 +102,25 @@ def confirm_pending_publish(yt_id, channel=1):
             )
             return
     log_publish(yt_id, channel)   # pending nahi mili - nayi entry
+
+
+def revert_pending_publish(channel=1):
+    """Upload (auth fail) hone par aaj ki 'pending' entry hata do.
+
+    Warna wo entry hamesha 'pending' reh jaati hai aur slot covered dikhta
+    hai - jabki video gayi hi nahi.
+    """
+    log_path = ROOT / "data" / "publish_log.json"
+    log = _load_publish_log()
+    today = datetime.now(IST).date().isoformat()
+    pubs = log.get("publishes", [])
+    kept = [e for e in pubs
+            if not (e.get("yt") == "pending" and e.get("ch", 1) == channel
+                    and e.get("date") == today)]
+    if len(kept) != len(pubs):
+        log["publishes"] = kept
+        log_path.write_text(json.dumps(log, ensure_ascii=False, indent=1),
+                            encoding="utf-8")
 
 
 def _local_count_today(channel=1):
@@ -270,10 +290,22 @@ def main():
         total += len(t) + 1
     tags = trimmed
 
-    yt_id = upload_video(
-        out, title, desc,
-        tags, cfg["youtube"], channel=channel,
-    )
+    try:
+        yt_id = upload_video(
+            out, title, desc,
+            tags, cfg["youtube"], channel=channel,
+        )
+    except AuthError:
+        # Token hi fail hua - upload shuru hi nahi hua. Video ko WASTE na
+        # karo: pending entry hatao + history se unmark karo taaki agli
+        # run (ya watchdog) ise dobara utha kar upload kar sake.
+        print(f"[ch{channel}] Upload auth fail - video ko 'used' se hata "
+              f"raha hoon (agli run me dobara try hoga).")
+        revert_pending_publish(channel)
+        hist = load_history()
+        hist.pop(video_id, None)
+        save_history(hist)
+        raise
     print(f"YouTube (channel {channel}) pe upload ho gaya "
           f"({len(hashtags)} hashtags, {len(tags)} tags).")
 
