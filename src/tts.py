@@ -132,7 +132,9 @@ def synthesize(text, tts_cfg, out_path):
     last_err = None
     for name, fn in chain:
         try:
-            return fn()
+            result = fn()
+            print(f"  [TTS] voice ready - provider: {name}")
+            return result
         except Exception as e:  # noqa: BLE001 - agla fallback
             last_err = e
             print(f"WARNING: {name} TTS fail hua ({str(e)[:200]})")
@@ -164,9 +166,13 @@ def _write_pcm_wav(path, pcm, sample_rate=24000):
 def _gemini_tts(text, cfg, out_path):
     """Gemini 2.5 TTS se natural Hindi voice banao.
 
-    - GEMINI_API_KEY pehle; uska quota over ho to GEMINI_API_KEY_2
-      automatic use hota hai (chunk generate ke dauran switch hota hai)
-    - lambi script automatic chunks me jaati hai, phir WAV concat
+    EK VOICE GUARANTEE: poora script ek hi key + ek hi voice se banta hai.
+    Agar key ka quota khatam ho jaye to POORA script nayi key se dobara
+    banta hai - beech me key/voice switch NAHI hota (warna video ke andar
+    awaaz badal jaati thi).
+
+    - GEMINI_API_KEY pehle; quota over ho to GEMINI_API_KEY_2 (poora redo)
+    - lambi script chunks me jaati hai, phir WAV concat
     - fail hone pe fallback chain (ttsfree/IndicF5/edge-tts) chalti hai
     """
     import base64
@@ -187,69 +193,69 @@ def _gemini_tts(text, cfg, out_path):
         "tone, speaking natural Hindi:",
     )
 
-    client = genai.Client(api_key=api_keys[0])
-    key_idx = 0
+    chunks = _split_script(text, max_chars=1500)
 
-    def _generate(model, contents, config):
-        """Generate karo; quota/key error pe agli key se retry."""
-        nonlocal client, key_idx
-        try:
-            return client.models.generate_content(
-                model=model, contents=contents, config=config
+    def _generate_all(api_key):
+        """Poore script ke saare chunks EK key + EK voice se banao."""
+        client = genai.Client(api_key=api_key)
+        parts = []
+        for i, chunk in enumerate(chunks):
+            print(f"  [GeminiTTS] chunk {i + 1}/{len(chunks)} generate ho raha hai...")
+            resp = client.models.generate_content(
+                model=model,
+                contents=f"{style}\n\n{chunk}",
+                config=types.GenerateContentConfig(
+                    response_modalities=["AUDIO"],
+                    speech_config=types.SpeechConfig(
+                        voice_config=types.VoiceConfig(
+                            prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                                voice_name=voice
+                            )
+                        )
+                    ),
+                ),
             )
+            # response me inline audio (base64 PCM) aata hai
+            data = resp.candidates[0].content.parts[0].inline_data
+            raw = data.data
+            if isinstance(raw, str):
+                raw = base64.b64decode(raw)
+
+            # sample rate mime_type se nikaalo (audio/L16;rate=24000)
+            sample_rate = 24000
+            mime = (data.mime_type or "")
+            if "rate=" in mime:
+                try:
+                    sample_rate = int(mime.split("rate=")[-1].split(";")[0])
+                except ValueError:
+                    pass
+
+            part = out_path.parent / f"gemini_part{i}.wav"
+            _write_pcm_wav(part, raw, sample_rate)
+            if part.stat().st_size < 2000:
+                raise RuntimeError("Gemini TTS audio bahut chhota aaya")
+            parts.append(part)
+        return parts
+
+    last_err = None
+    for k_idx, api_key in enumerate(api_keys):
+        try:
+            parts = _generate_all(api_key)
+            break
         except Exception as e:  # noqa: BLE001
+            last_err = e
             err = str(e)
             quota_or_auth = any(s in err for s in (
                 "RESOURCE_EXHAUSTED", "429", "quota",
                 "API key not valid", "PERMISSION_DENIED",
             ))
-            if quota_or_auth and key_idx + 1 < len(api_keys):
-                key_idx += 1
-                print(f"  [GeminiTTS] key {key_idx} quota/issue - fallback key se retry...")
-                client = genai.Client(api_key=api_keys[key_idx])
-                return client.models.generate_content(
-                    model=model, contents=contents, config=config
-                )
+            if quota_or_auth and k_idx + 1 < len(api_keys):
+                print(f"  [GeminiTTS] key {k_idx + 1} issue - POORA script nayi "
+                      f"key se dobara bana rahe hain (voice same rahegi)...")
+                continue
             raise
-
-    chunks = _split_script(text, max_chars=1500)
-    parts = []
-    for i, chunk in enumerate(chunks):
-        print(f"  [GeminiTTS] chunk {i + 1}/{len(chunks)} generate ho raha hai...")
-        resp = _generate(
-            model,
-            f"{style}\n\n{chunk}",
-            types.GenerateContentConfig(
-                response_modalities=["AUDIO"],
-                speech_config=types.SpeechConfig(
-                    voice_config=types.VoiceConfig(
-                        prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                            voice_name=voice
-                        )
-                    )
-                ),
-            ),
-        )
-        # response me inline audio (base64 PCM) aata hai
-        data = resp.candidates[0].content.parts[0].inline_data
-        raw = data.data
-        if isinstance(raw, str):
-            raw = base64.b64decode(raw)
-
-        # sample rate mime_type se nikaalo (audio/L16;rate=24000), default 24k
-        sample_rate = 24000
-        mime = (data.mime_type or "")
-        if "rate=" in mime:
-            try:
-                sample_rate = int(mime.split("rate=")[-1].split(";")[0])
-            except ValueError:
-                pass
-
-        part = out_path.parent / f"gemini_part{i}.wav"
-        _write_pcm_wav(part, raw, sample_rate)
-        if part.stat().st_size < 2000:
-            raise RuntimeError("Gemini TTS audio bahut chhota aaya")
-        parts.append(part)
+    else:
+        raise RuntimeError(f"Gemini TTS fail hua: {last_err}")
 
     out_wav = out_path.with_suffix(".wav")
     if len(parts) == 1:

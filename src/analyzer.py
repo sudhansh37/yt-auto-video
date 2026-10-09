@@ -57,15 +57,21 @@ Return ONLY a JSON object with exactly these keys:
   "captions": "wahi script ka HINGLISH version - Latin/Roman letters me likha hua (jaise: 'yeh dekho kya ho raha hai', 'aap yeh dekh sakte hain'). Sirf Latin letters use karo, Devanagari letters BILKUL NAHI. Same words, same order - bas script ko Roman me likha hua. Ye on-screen captions ke liye hai."
 }}
 
-Script rules:
+Script rules (STORY-TELLING STYLE - jaise kisi dost ko kahani suna rahe ho):
 - Script video me jo ACTUALLY dikh raha hai usi par based ho - kuch mat banao.
+- Pehli line ek CASUAL HOOK ho jo viewer ko seedha address kare, jaise:
+  "भाई, जानवरों में भी ऐसा होता है क्या?" ya "भाई सुनो, यहाँ क्या हुआ".
+  Halka curious/shocking tone.
+- Phir poori baat DOST KI TARAH sunao - connectors use karo jaise:
+  "दरअसल", "और फिर", "जो शायद", "और कुछ ही दिनों में".
+- Bhasha: simple spoken Hindi (Devanagari), roz-marra ke shabd - jaise
+  भाई, दरअसल, शायद, बर्दाश्त, जान चली. Kitaabi ya heavy shabd NAHI.
+- Sentences lambi aur connected ho sakti hain (ek hi flow me), par koi
+  ellipses (...), dashes (-, --), ya line breaks NAHI - sirf normal
+  punctuation (. , ? !). TTS inhi pe natural pause leti hai.
 - Spoken Hindi ~2.5 words per second hoti hai, isliye target ~{words} words.
-- Pehle 2 second me ek strong attention-grabbing hook line.
-- End me ek strong SUBSCRIBE CTA zaroor - natural Hindi me, jaise "aur haan,
-  agar aapko aisi videos pasand aati hain to channel ko subscribe karna mat
-  bhoolna". Ye aakhri line hogi.
-- IMPORTANT: script ek hi continuous flow me likho - koi ellipses (...),
-  dashes (-, --), ya line breaks NAHI. Chhoti natural sentences.
+- Aakhir me ek chhota casual SUBSCRIBE CTA, jaise: "और भाई, ऐसी वीडियोज़ के
+  लिए चैनल को सब्सक्राइब कर लेना". Ye aakhri line hogi.
 """
 
 # 503 "high demand" fail hone pe ye fallback models try hote hain

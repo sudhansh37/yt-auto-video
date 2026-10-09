@@ -277,10 +277,10 @@ def _slow_music_source():
     return f"aevalsrc='{expr}':s=44100"
 
 
-def _top_text_filters(text, workdir):
-    """Video ke UPAR (white canvas me) MAZEDAAR headline draw karo.
+def _top_text_filters(text, workdir, color="white"):
+    """Video ke UPAR (background area me) MAZEDAAR headline draw karo.
 
-    Text upar wale white band (0..240px) me center hota hai aur lambai ke
+    Text upar wale band (0..240px) me center hota hai aur lambai ke
     hisaab se font size chhota hota hai (overflow na ho). Hinglish (Roman)
     ya Devanagari - font auto choose hota hai.
     """
@@ -293,7 +293,7 @@ def _top_text_filters(text, workdir):
     tf.write_text(text, encoding="utf-8")
     return (
         f"drawtext=fontfile={font}:textfile={tf.as_posix()}"
-        f":fontcolor=black:fontsize={size}:x=(w-text_w)/2:y=(240-text_h)/2"
+        f":fontcolor={color}:fontsize={size}:x=(w-text_w)/2:y=(240-text_h)/2"
     )
 
 
@@ -317,6 +317,7 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
     speed = float(effects_cfg.get("video_speed", 1.12))
     bgm_volume = float(effects_cfg.get("bgm_volume", 0.10))
     zoom_amount = float(effects_cfg.get("zoom_amount", 0.28))
+    canvas = effects_cfg.get("canvas_color", "black")   # background colour
 
     out_duration = min(duration / speed, audio_dur)
     total_frames = int(out_duration * FPS) + 1
@@ -351,9 +352,26 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
         f":brightness={effects_cfg.get('brightness', 0.04)},"
         # 6. sharpness (crisp look)
         f"unsharp=5:5:{effects_cfg.get('sharpen', 1.0)},"
-        # 7. white canvas (upar-neeche background)
-        f"pad={TARGET_W}:{TARGET_H}:0:{pad_y}:white,"
+        # 7. background canvas (upar-neeche - default black)
+        f"pad={TARGET_W}:{TARGET_H}:0:{pad_y}:{canvas},"
     )
+
+    # ---- RED LINE (video aur background ke beech, screenshot jaisa) ----
+    # Poori width ki patli line band ke top edge pe. drawbox core filter hai.
+    bw = int(effects_cfg.get("border_width", 4))
+    if bw > 0:
+        bcolor = effects_cfg.get("border_color", "red")
+        if effects_cfg.get("border_top", True):
+            vf += (f"drawbox=x=0:y={pad_y - bw}:w=iw:h={bw}:"
+                   f"color={bcolor}@1:t=fill,")
+        if effects_cfg.get("border_bottom", False):
+            vf += (f"drawbox=x=0:y={pad_y + BAND_H}:w=iw:h={bw}:"
+                   f"color={bcolor}@1:t=fill,")
+
+    # ---- exposure (thoda bright) - filter ho to hi lagta hai ----
+    expo = float(effects_cfg.get("exposure", 0.0))
+    if expo and _has_filter("exposure"):
+        vf += f"exposure=exposure={expo},"
 
     # ---- LOW-RES AUTO-ENHANCE (upscaled content ko crisp 1080p look) ----
     # CAS = contrast-adaptive sharpening (upscaled video ke liye best).
@@ -367,7 +385,10 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
 
     # 7.5 video ke UPAR mazedaar headline (agar diya gaya ho)
     if top_text:
-        vf += _top_text_filters(top_text, out_path.parent) + ","
+        vf += _top_text_filters(
+            top_text, out_path.parent,
+            effects_cfg.get("overlay_text_color", "white"),
+        ) + ","
 
     # 8. time-synced captions (Hinglish ya Devanagari - font auto)
     if script:
