@@ -1,8 +1,9 @@
 """yt-dlp helpers - channel ki shorts list nikalna + download.
 
-QUALITY NOTE: vertical (9:16) videos me 1080p ka matlab WIDTH 1080 hota hai
-(height 1920). Isliye format me width<=1080 use karte hain - height<=1080
-rakhte to sirf 607px ki giri hui quality milti!
+QUALITY NOTE: ab koi WIDTH CAP nahi hai - source ka BEST available stream
+download hota hai (jaise 1080x1920, ya agar usse upar available ho to
+1440x2560 / 2160x3840). Vertical (9:16) videos me resolution WIDTH se naapo
+(1080p = 1080x1920) - height se naapne par giri hui quality milegi.
 
 Cloud IPs (GitHub Actions) pe kabhi kabhi YouTube "Sign in to confirm
 you're not a bot" dikha deta hai. Isliye:
@@ -54,8 +55,9 @@ def list_short_ids(channel_url):
 def _download_attempt(video_id, out_dir, client, started=0.0):
     url = f"https://www.youtube.com/watch?v={video_id}"
     opts = {
-        # width<=1080 = vertical video ka full HD (1080x1920)
-        "format": "bv*[width<=1080]+ba/b[width<=1080]/b",
+        # BEST available stream (koi width cap nahi) - source jo bhi sabse
+        # acchi quality de, wahi download hoti hai (1080/1440/2160...)
+        "format": "bv*+ba/b",
         "outtmpl": str(out_dir / "source.%(ext)s"),
         "merge_output_format": "mp4",
         "quiet": True,
