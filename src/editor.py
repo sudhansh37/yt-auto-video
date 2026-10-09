@@ -9,12 +9,14 @@ ffmpeg editor v5 - Hindi Short banata hai:
   4. Color grade: saturation + contrast + brightness
   5. Sharpness (unsharp)
   6. Video thodi tez + voice loudness normalize
-  7. Background music (halki, copyright-free ffmpeg synth) - sirf Hindi TTS
+  7. QUALITY: x264 CRF 13 (near-lossless) + preset slow + 256k audio
+     (config.yaml me crf / preset / audio_bitrate se control hota hai)
+  8. Background music (halki, copyright-free ffmpeg synth) - sirf Hindi TTS
      voice ke saath. Original English audio BILKUL mix NAHI hota (feature
      poora hata diya gaya hai - audio 100% Hindi rehna chahiye).
-  8. UPAR white area me MAZEDAAR Hinglish headline (top_text) - video ke
+  9. UPAR white area me MAZEDAAR Hinglish headline (top_text) - video ke
      baare me chhoti catchy line (config se on/off).
-  9. TIME-SYNCED HINGLISH CAPTIONS - jo script Gemini likhta hai (jo voice
+ 10. TIME-SYNCED HINGLISH CAPTIONS - jo script Gemini likhta hai (jo voice
      bolti hai) wahi text video pe bottom me white-on-black dikhta hai.
      Captions HINGLISH (Roman letters) me hoti hain - Devanagari text aaye
      to Devanagari font automatically use hota hai.
@@ -329,15 +331,27 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
         cmd += ["-f", "lavfi", "-t", f"{out_duration + 2:.2f}",
                 "-i", _slow_music_source()]
 
+    # ---- QUALITY (max) - config se control hota hai ----
+    crf = str(int(effects_cfg.get("crf", 13)))          # kam = behtar
+    preset = effects_cfg.get("preset", "slow")           # slow = behtar
+    audio_bitrate = effects_cfg.get("audio_bitrate", "256k")
+
     cmd += [
         "-filter_complex", f"[0:v]{vf}[v];{af}",
         "-map", "[v]",
         "-map", "[a]",
-        "-c:v", "libx264", "-preset", effects_cfg.get("preset", "medium"),
-        "-crf", "18",
+        "-c:v", "libx264",
+        "-preset", preset,            # slow = behtar quality (compression smart)
+        "-crf", crf,                  # 13 = near-lossless
+        "-profile:v", "high",
+        # aq-mode=3 = dark scenes me behtar detail; rc-lookahead=20 se memory
+        # bachti hai (default 60 bhaari padta hai - chhote runner pe render
+        # OOM ho jata tha). Quality par koi asar nahi.
+        "-x264-params", "aq-mode=3:rc-lookahead=20",
         "-threads", str(effects_cfg.get("threads", 0)),
         "-pix_fmt", "yuv420p",
-        "-c:a", "aac", "-b:a", "192k",
+        "-c:a", "aac", "-b:a", audio_bitrate,
+        "-movflags", "+faststart",
         "-shortest",
         str(out_path),
     ]
