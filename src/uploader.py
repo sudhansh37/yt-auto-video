@@ -82,13 +82,59 @@ def _refresh_access_token(channel=1):
 def count_today_uploads(channel=1, max_pages=4):
     """AAJ (IST) is channel pe kitni videos upload ho chuki hain? (int)
 
-    YouTube search API (forMine=true, order=date) se latest videos leta
-    hai aur aaj ki IST date wali entries ginta hai. Ye SABSE reliable
-    source of truth hai - publish_log.json commit fail ho jaye tab bhi
-    duplicate upload nahi hoga.
+    PEHLA TAREEKA (sasta + reliable): channels.list -> uploads playlist ->
+    playlistItems.list se aaj ki videos ginta hai. (Search API 400
+    INVALID_ARGUMENT de rahi thi, aur wo 100 quota units bhi khaati hai.)
+
+    Fail hone par purana search API fallback chalta hai. Wo bhi fail ho to
+    exception raise hota hai - caller (main.py) local publish_log use karta hai.
     """
     token = _refresh_access_token(channel)
     today = datetime.now(IST).date()
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # ---- 1) uploads playlist se count (sasta) ----
+    try:
+        r = requests.get(
+            f"{API_BASE}/youtube/v3/channels",
+            headers=headers,
+            params={"part": "contentDetails", "mine": "true"},
+            timeout=30,
+        )
+        r.raise_for_status()
+        items = r.json().get("items") or []
+        uploads = items[0]["contentDetails"]["relatedPlaylists"]["uploads"]
+
+        count = 0
+        page_token = None
+        for _ in range(max_pages):
+            params = {"part": "contentDetails", "playlistId": uploads,
+                      "maxResults": 50}
+            if page_token:
+                params["pageToken"] = page_token
+            pr = requests.get(
+                f"{API_BASE}/youtube/v3/playlistItems",
+                headers=headers, params=params, timeout=30,
+            )
+            pr.raise_for_status()
+            data = pr.json()
+            for it in data.get("items", []):
+                pub = (it.get("contentDetails") or {}).get("videoPublishedAt")
+                if not pub:
+                    continue
+                dt = datetime.fromisoformat(
+                    pub.replace("Z", "+00:00")).astimezone(IST)
+                if dt.date() == today:
+                    count += 1
+            page_token = data.get("nextPageToken")
+            if not page_token:
+                break
+        return count
+    except Exception as e:  # noqa: BLE001 - purana search try karo
+        print(f"  [cap] playlist se count nahi hua ({str(e)[:120]}) - "
+              f"search API try kar rahe hain...")
+
+    # ---- 2) purana search API (fallback) ----
     start_of_day = datetime.combine(today, time.min, IST)
     # RFC 3339: 2026-09-24T00:00:00+05:30
     published_after = start_of_day.isoformat()

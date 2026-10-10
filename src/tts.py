@@ -197,7 +197,15 @@ def _gemini_tts(text, cfg, out_path):
 
     def _generate_all(api_key):
         """Poore script ke saare chunks EK key + EK voice se banao."""
-        client = genai.Client(api_key=api_key)
+        # http_options = har request ka hard timeout (warna TTS call hang ho
+        # sakti hai aur job ghanton atak jata hai)
+        try:
+            client = genai.Client(
+                api_key=api_key,
+                http_options=types.HttpOptions(timeout=180_000),
+            )
+        except Exception:  # noqa: BLE001 - koi bhi issue ho to plain client
+            client = genai.Client(api_key=api_key)
         parts = []
         for i, chunk in enumerate(chunks):
             print(f"  [GeminiTTS] chunk {i + 1}/{len(chunks)} generate ho raha hai...")

@@ -90,6 +90,14 @@ FALLBACK_MODELS = [
 # har model ke attempts ke beech ka wait (seconds) - exponential
 ATTEMPT_WAITS = [15, 30, 60]
 
+# HAR Gemini request ka max time (2 min). Iske bina agar API stall ho jaye
+# to call hamesha ke liye latak jati hai - poora job 1+ ghanta atka rehta tha.
+HTTP_TIMEOUT_MS = 120_000
+
+# POORE analysis (dono keys milkar) ka max time - isse zyada hone par chhod
+# dete hain, taaki job ghanton na atke.
+ANALYZE_BUDGET_S = 600
+
 
 def _validate(analysis):
     for key in ("title", "description", "script"):
@@ -132,13 +140,17 @@ def _api_keys():
     return keys
 
 
-def _try_models(client, file_obj, prompt, primary):
+def _try_models(client, file_obj, prompt, primary, deadline=None):
     """Ek key (client) ke saath saare models try karo. analysis ya raise."""
     models = [primary] + [m for m in FALLBACK_MODELS if m != primary]
 
     last_err = None
     for model in models:
         for attempt in range(1, len(ATTEMPT_WAITS) + 2):   # 4 attempts
+            # total time budget khatam? (job ghanton atakne se bachav)
+            if deadline is not None and time.time() > deadline:
+                raise RuntimeError(
+                    "Gemini analysis ka time budget khatam - ruk rahe hain.")
             try:
                 resp = client.models.generate_content(
                     model=model,
@@ -182,9 +194,19 @@ def _try_models(client, file_obj, prompt, primary):
 def analyze_video(video_path, duration_s, gemini_cfg):
     keys = _api_keys()
     last_err = None
+    deadline = time.time() + ANALYZE_BUDGET_S   # poore analysis ka budget
 
     for k_idx, api_key in enumerate(keys):
-        client = genai.Client(api_key=api_key)
+        # http_options = har request ka hard timeout (warna call hang ho
+        # sakti hai). Purane google-genai me ye kwarg na ho to bina timeout
+        # ke chalte hain (fallback).
+        try:
+            client = genai.Client(
+                api_key=api_key,
+                http_options=types.HttpOptions(timeout=HTTP_TIMEOUT_MS),
+            )
+        except Exception:  # noqa: BLE001 - koi bhi issue ho to plain client
+            client = genai.Client(api_key=api_key)
 
         # video upload + processing complete hone ka wait
         key_label = f"key {k_idx + 1}/{len(keys)}"
@@ -216,7 +238,7 @@ def analyze_video(video_path, duration_s, gemini_cfg):
         primary = gemini_cfg.get("model", "gemini-3.6-flash")
 
         try:
-            return _try_models(client, f, prompt, primary)
+            return _try_models(client, f, prompt, primary, deadline)
         except Exception as e:  # noqa: BLE001 - ye key over, agli key
             last_err = e
             if k_idx + 1 < len(keys):
