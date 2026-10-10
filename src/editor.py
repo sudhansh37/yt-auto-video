@@ -70,8 +70,19 @@ def _ffmpeg_exe():
 FFMPEG = _ffmpeg_exe()
 
 
-def _run(cmd):
-    result = subprocess.run(cmd, capture_output=True, text=True)
+def _run(cmd, timeout=None):
+    """ffmpeg/ffprobe chalao. timeout diya to usse zyada nahi chalega.
+
+    Bina timeout ke ye call hamesha ke liye latak sakti hai (aaj ka job isi
+    wajah se 74 min atka tha).
+    """
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True,
+                                timeout=timeout)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(
+            f"ffmpeg/ffprobe {timeout}s me khatam nahi hua (timeout) - "
+            f"file kharab ho sakti hai.")
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg fail hua:\n{result.stderr[-2000:]}")
     return result
@@ -129,19 +140,26 @@ def _has_filter(name):
 
 
 def get_duration(path):
-    """ffprobe se duration; ffprobe na ho to ffmpeg -i se parse karo."""
+    """ffprobe se duration; ffprobe na ho to ffmpeg -i se parse karo.
+
+    Dono raste 60s timeout ke saath - kharab file pe kabhi hang nahi hoga.
+    """
     if shutil.which("ffprobe"):
         out = _run([
             "ffprobe", "-v", "error",
             "-show_entries", "format=duration",
             "-of", "json", str(path),
-        ])
+        ], timeout=60)
         return float(json.loads(out.stdout)["format"]["duration"])
-    # fallback: ffmpeg ka stderr parse karo
-    result = subprocess.run(
-        [FFMPEG, "-hide_banner", "-i", str(path), "-f", "null", "-"],
-        capture_output=True, text=True,
-    )
+    # fallback: ffmpeg ka stderr parse karo (60s timeout)
+    try:
+        result = subprocess.run(
+            [FFMPEG, "-hide_banner", "-i", str(path), "-f", "null", "-"],
+            capture_output=True, text=True, timeout=60,
+        )
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("ffmpeg duration check 60s me khatam nahi hua "
+                           "(file kharab lagti hai).")
     return _parse_duration_from_stderr(result.stderr)
 
 
@@ -555,5 +573,5 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
         "-shortest",
         str(out_path),
     ]
-    _run(cmd)
+    _run(cmd, timeout=1500)   # render max 25 min (hang se bachav)
     return out_path

@@ -14,7 +14,10 @@ you're not a bot" dikha deta hai. Isliye:
   3. remote_components ejs:github -> YouTube ka n-challenge solve hota hai,
      warna formats missing ho jaate hain ("Only images are available").
 """
+import json
 import os
+import shutil
+import subprocess
 import tempfile
 import time
 from pathlib import Path
@@ -52,6 +55,33 @@ def list_short_ids(channel_url):
     return [e["id"] for e in entries if e and e.get("id")]
 
 
+def _is_valid_video(path, timeout=60):
+    """File asli, decodable video hai? (ffprobe, timeout ke saath)
+
+    SABR-only experiment me yt-dlp kabhi chhoti/kharab file de deta hai -
+    usse Gemini 'FAILED' keh deta hai (aur ffmpeg us par hang kar sakta hai).
+    Isliye download ke baad validate karte hain.
+    """
+    ffprobe = shutil.which("ffprobe") or "ffprobe"
+    try:
+        r = subprocess.run(
+            [ffprobe, "-v", "error", "-select_streams", "v:0",
+             "-show_entries", "stream=codec_type", "-of", "json",
+             str(path)],
+            capture_output=True, text=True, timeout=timeout,
+        )
+    except Exception as e:  # noqa: BLE001 - timeout/binary missing
+        print(f"[downloader] WARNING: video check nahi hua ({str(e)[:80]})")
+        return True   # check na ho paye to file ko chalne do (block na karo)
+    if r.returncode != 0:
+        return False
+    try:
+        streams = json.loads(r.stdout).get("streams") or []
+    except Exception:  # noqa: BLE001
+        return False
+    return bool(streams)   # koi video stream hona zaroori hai
+
+
 def _download_attempt(video_id, out_dir, client, started=0.0):
     url = f"https://www.youtube.com/watch?v={video_id}"
     opts = {
@@ -84,6 +114,10 @@ def _download_attempt(video_id, out_dir, client, started=0.0):
                 print(f"[downloader] WARNING: file bahut chhoti "
                       f"({p.stat().st_size} bytes) - ye asli video nahi hai, "
                       f"agla client try kar rahe hain")
+                continue
+            if not _is_valid_video(p):
+                print("[downloader] WARNING: file decodable video nahi hai "
+                      "(kharab/SABR) - agla client try kar rahe hain")
                 continue
             return p
         print(f"[downloader] WARNING: stale file reject ho rahi hai: {p}")
