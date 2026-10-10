@@ -159,10 +159,13 @@ def _try_models(client, file_obj, prompt, primary):
                 if _is_permanent_error(err_str):
                     print(f"  {model} available nahi hai - agla fallback model...")
                     break
-                # DAILY quota khatam (PerDay) - aaj is model par retry
-                # bekar hai, seedha agla model try karo
-                if "RESOURCE_EXHAUSTED" in err_str and "PerDay" in err_str:
-                    print(f"  {model} ka DAILY quota khatam - agla fallback model...")
+                # quota khatam (PerDay / free-tier limit 0) - aaj is model par
+                # retry bekar hai, seedha agla model try karo (warna 4 attempts
+                # ka 15/30/60s wait poora waste hota hai)
+                if "RESOURCE_EXHAUSTED" in err_str and (
+                        "PerDay" in err_str or "limit: 0" in err_str
+                        or "free_tier" in err_str):
+                    print(f"  {model} ka quota khatam - agla fallback model...")
                     break
                 wait = ATTEMPT_WAITS[min(attempt - 1, len(ATTEMPT_WAITS) - 1)]
                 print(f"  WARNING: Gemini {model} attempt {attempt} fail: {e}")
@@ -188,9 +191,18 @@ def analyze_video(video_path, duration_s, gemini_cfg):
         print(f"  Gemini ko video upload ho rahi hai ({key_label})...")
         try:
             f = client.files.upload(file=str(video_path))
-            while f.state.name == "PROCESSING":
-                time.sleep(3)
+            # PROCESSING wait - MAX 5 minute. (Pehle ye loop bina timeout ke
+            # tha - file kabhi ACTIVE na hoti to run HAMESHA ke liye hang ho
+            # jata tha, isi wajah se poora job stuck ho gaya tha.)
+            waited = 0
+            while f.state.name == "PROCESSING" and waited < 300:
+                time.sleep(5)
+                waited += 5
                 f = client.files.get(name=f.name)
+            if f.state.name == "PROCESSING":
+                # TimeoutError (RuntimeError nahi) - taaki agli key try ho
+                raise TimeoutError(
+                    "Gemini file 5 min me ACTIVE nahi hui - agli key/retry.")
             if f.state.name != "ACTIVE":
                 raise RuntimeError(f"Gemini file state unexpected: {f.state.name}")
         except RuntimeError:
