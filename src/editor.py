@@ -38,7 +38,13 @@ from pathlib import Path
 
 TARGET_W, TARGET_H, FPS = 1080, 1920, 30
 BAND_W, BAND_H = 1080, 1440   # video band (3:4 crop) - iske upar/neeche white
-BIG_W, BIG_H = 2160, 2880     # zoom se pehle 2x upscale (quality ke liye)
+# zoom se pehle ka upscale. Max zoom 1.30x (config zoom_amount 0.30) hai,
+# isliye 1.30x hi rakha: zoompan ka crop output band (1080x1440) ke barabar
+# hai -> koi resample nahi, aur heavy region 6.2MP se 2.55MP (2.4x kam kaam).
+# Pehle 2160x2880 (2x) tha - 360x640 source se koi asli detail nahi aata tha,
+# sirf CPU/waqt khaata tha (is wajah se render 25 min+ le raha tha).
+# NOTE: zoom_amount badlo to BIG = BAND x (1+zoom_amount) rakhna.
+BIG_W, BIG_H = 1404, 1872
 
 # caption settings
 CAPTION_FONT_CANDIDATES = [
@@ -446,7 +452,7 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
     vf = (
         # 1. video thodi tez (speed)
         f"setpts=PTS/{speed},"
-        # 2. 2x upscale (zoom quality ke liye)
+        # 2. upscale (zoom ke liye - 1.30x, resample-free)
         f"scale={BIG_W}:{BIG_H}:force_original_aspect_ratio=increase:flags=lanczos,"
         # 3. CROP: TOP se anchor (y=0) - upar ka content safe, neeche ka
         #    hissa (jahan English caption hota hai) kat jata hai
