@@ -76,6 +76,15 @@ def _download_attempt(video_id, out_dir, client, started=0.0):
         # sirf FRESH file accept karo - download shuru hone se pehle ki
         # koi bachi hui STALE file reject karo (1s tolerance ke saath)
         if p.stat().st_mtime + 1 >= started:
+            # CHHOTI file = download galat hua. YouTube ka SABR-only experiment
+            # kabhi-kabhi sirf preview/storyboard deta hai (kuch KB) - usse
+            # Gemini 'FAILED' keh deta hai. Aisi file reject karo taaki agla
+            # player client try ho.
+            if p.stat().st_size < 150_000:
+                print(f"[downloader] WARNING: file bahut chhoti "
+                      f"({p.stat().st_size} bytes) - ye asli video nahi hai, "
+                      f"agla client try kar rahe hain")
+                continue
             return p
         print(f"[downloader] WARNING: stale file reject ho rahi hai: {p}")
     return None

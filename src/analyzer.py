@@ -121,6 +121,14 @@ def _validate(analysis):
         analysis["top_text"] = ""
 
 
+class _RetryableError(Exception):
+    """Agli key/retry se theek ho sakta hai (hard fail nahi).
+
+    Note: RuntimeError se alag rakha hai kyunki analyze_video me
+    `except RuntimeError: raise` hai (wo hard-fail maanta hai).
+    """
+
+
 def _is_permanent_error(err_str):
     """404 (model retired) / invalid key - in par retry bekar hai."""
     return (
@@ -226,7 +234,11 @@ def analyze_video(video_path, duration_s, gemini_cfg):
                 raise TimeoutError(
                     "Gemini file 5 min me ACTIVE nahi hui - agli key/retry.")
             if f.state.name != "ACTIVE":
-                raise RuntimeError(f"Gemini file state unexpected: {f.state.name}")
+                # FAILED aksar galat/corrupt video ki wajah se hota hai -
+                # isko retryable banao (agli key/retry), hard fail nahi.
+                raise _RetryableError(
+                    f"Gemini file state: {f.state.name} - video galat/corrupt "
+                    f"ho sakti hai, agli key/retry try kar rahe hain.")
         except RuntimeError:
             raise
         except Exception as e:  # noqa: BLE001 - upload fail = agli key try
