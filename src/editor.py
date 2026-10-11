@@ -36,15 +36,15 @@ import shutil
 import subprocess
 from pathlib import Path
 
-TARGET_W, TARGET_H, FPS = 1440, 2560, 30   # 1440p (>1080p)
-BAND_W, BAND_H = 1440, 1920   # 1440p band (3:4 crop)   # video band (3:4 crop) - iske upar/neeche white
+TARGET_W, TARGET_H, FPS = 2160, 3840, 30   # 4K (2160x3840)
+BAND_W, BAND_H = 2160, 2880   # 4K band (3:4 crop)   # video band (3:4 crop) - iske upar/neeche white
 # zoom se pehle ka upscale. Max zoom 1.30x (config zoom_amount 0.30) hai,
 # isliye 1.30x hi rakha: zoompan ka crop output band (1080x1440) ke barabar
 # hai -> koi resample nahi, aur heavy region 6.2MP se 2.55MP (2.4x kam kaam).
 # Pehle 2160x2880 (2x) tha - 360x640 source se koi asli detail nahi aata tha,
 # sirf CPU/waqt khaata tha (is wajah se render 25 min+ le raha tha).
 # NOTE: zoom_amount badlo to BIG = BAND x (1+zoom_amount) rakhna.
-BIG_W, BIG_H = 1872, 2496   # = BAND x 1.30 (zoom max)
+BIG_W, BIG_H = 2808, 3744   # = BAND x 1.30 (zoom max)
 
 # caption settings
 CAPTION_FONT_CANDIDATES = [
@@ -589,5 +589,5 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
         "-t", f"{out_duration:.2f}",
         str(out_path),
     ]
-    _run(cmd, timeout=2400)   # render max 40 min (1440p thoda slow hai)
+    _run(cmd, timeout=2400)   # render max 40 min (4K bhaari hai)
     return out_path
