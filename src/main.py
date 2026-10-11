@@ -250,6 +250,17 @@ def main():
           f"captions={'on' if caption_text else 'off'}, "
           f"top-text={'on' if top_text else 'off'}) -> {out.name}")
 
+    # ---- DRY RUN: YouTube pe publish NAHI, sirf video save karo ----
+    # Video workflow run ke artifact me milega (daily.yml ka upload-artifact
+    # step). History/pending bhi touch nahi hote - kuch bhi waste nahi hota.
+    if os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes"):
+        import shutil as _sh
+        dest = work / f"DRYRUN-ch{channel}-{video_id}.mp4"
+        _sh.copy(out, dest)
+        print(f"[dry-run] Publish NAHI hua. Video ready: {dest}")
+        print(f"[dry-run] Title: {analysis['title']}")
+        return
+
     # ---- 6. upload se PEHLE history + pending log (KILL-SAFE) ----
     # Agar run upload ke dauran/beech me kill ho jaye (timeout aadi), to bhi:
     #   - ye source video dobara use nahi hogi (history SHARED hai,
