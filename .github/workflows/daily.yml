@@ -32,6 +32,12 @@ on:
         default: "true"
         type: choice
         options: ["true", "false"]
+      quality_test:
+        description: "true = Gemini/TTS skip, sirf max-quality download + edit (English audio) - quality check ke liye"
+        required: false
+        default: "true"
+        type: choice
+        options: ["true", "false"]
 
 permissions:
   contents: write   # data/history.json + publish_log.json commit karne ke liye
@@ -63,6 +69,8 @@ jobs:
       VOICE: hi-IN-MadhurNeural
       # true (default) = publish NAHI, sirf video banake artifact me daalo
       DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
+      # true = Gemini/TTS skip, sirf download + edit (original English audio)
+      QUALITY_TEST: ${{ github.event.inputs.quality_test || 'true' }}
     steps:
       - uses: actions/checkout@v4
 

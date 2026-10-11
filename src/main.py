@@ -218,6 +218,20 @@ def main():
     duration = get_duration(src)
     print(f"Download complete ({duration:.0f}s).")
 
+    # ---- QUALITY-TEST MODE: Gemini/TTS skip, sirf download + edit ----
+    # GEMINI_API_KEY bilkul use NAHI hoti. Original ENGLISH audio rehta hai
+    # (source ka apna audio). Video workflow run ke artifact me milta hai.
+    if os.environ.get("QUALITY_TEST", "").strip().lower() in ("1", "true", "yes"):
+        print("[quality-test] Gemini + TTS skip - original English audio.")
+        _variant = random.choice(cfg["effects"]["variants"])
+        _out = edit_video(src, src, work / "final.mp4", _variant,
+                          cfg["effects"], script="", top_text=None)
+        import shutil as _sh
+        _dest = work / f"DRYRUN-ch{channel}-{video_id}.mp4"
+        _sh.copy(_out, _dest)
+        print(f"[quality-test] Video ready: {_dest}")
+        return
+
     # ---- 3. Gemini analysis ----
     print("Gemini se analysis ho rahi hai...")
     analysis = analyze_video(src, duration, cfg["gemini"])
