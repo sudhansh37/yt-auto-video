@@ -32,7 +32,7 @@ jobs:
   check-and-publish:
     runs-on: ubuntu-latest
     # 75 min: dono channels ke catch-up ek ke baad ek chalte hain
-    timeout-minutes: 75
+    timeout-minutes: 110
     # JOB-LEVEL env: check-only step ko bhi channel 2 ke secrets dikhne
     # chahiye (warna wo channel ko monitor hi nahi kar payega)
     env:

@@ -36,15 +36,15 @@ import shutil
 import subprocess
 from pathlib import Path
 
-TARGET_W, TARGET_H, FPS = 1080, 1920, 30
-BAND_W, BAND_H = 1080, 1440   # video band (3:4 crop) - iske upar/neeche white
+TARGET_W, TARGET_H, FPS = 1440, 2560, 30   # 1440p (>1080p)
+BAND_W, BAND_H = 1440, 1920   # 1440p band (3:4 crop)   # video band (3:4 crop) - iske upar/neeche white
 # zoom se pehle ka upscale. Max zoom 1.30x (config zoom_amount 0.30) hai,
 # isliye 1.30x hi rakha: zoompan ka crop output band (1080x1440) ke barabar
 # hai -> koi resample nahi, aur heavy region 6.2MP se 2.55MP (2.4x kam kaam).
 # Pehle 2160x2880 (2x) tha - 360x640 source se koi asli detail nahi aata tha,
 # sirf CPU/waqt khaata tha (is wajah se render 25 min+ le raha tha).
 # NOTE: zoom_amount badlo to BIG = BAND x (1+zoom_amount) rakhna.
-BIG_W, BIG_H = 1404, 1872
+BIG_W, BIG_H = 1872, 2496   # = BAND x 1.30 (zoom max)
 
 # caption settings
 CAPTION_FONT_CANDIDATES = [
@@ -561,7 +561,7 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
         hidx = 3 if bgm_volume > 0 else 2
         vchain = (f"[0:v]{vf}[base];"
                   f"[base][{hidx}:v]overlay="
-                  f"x=(main_w-overlay_w)/2:y=(240-overlay_h)/2:format=yuv420[v]")
+                  f"x=(main_w-overlay_w)/2:y=({pad_y}-overlay_h)/2:format=yuv420[v]")
     else:
         vchain = f"[0:v]{vf}[v]"
 
@@ -582,7 +582,12 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
         "-c:a", "aac", "-b:a", audio_bitrate,
         "-movflags", "+faststart",
         "-shortest",
+        # ASLI FIX: -loop 1 -i headline.png infinite stream banata hai aur
+        # -shortest usse kabhi nahi roka (ffmpeg hamesha chalta rehta tha,
+        # isliye har render timeout pe mar raha tha). Output ko duration se
+        # bound karo - ab render finite hai aur chand minute me khatam hota hai.
+        "-t", f"{out_duration:.2f}",
         str(out_path),
     ]
-    _run(cmd, timeout=2100)   # render max 35 min (1500s bahut tight tha)
+    _run(cmd, timeout=2400)   # render max 40 min (1440p thoda slow hai)
     return out_path

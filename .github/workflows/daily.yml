@@ -14,7 +14,7 @@ name: publish-short
 
 on:
   schedule:
-    - cron: "30 4 * * *"     # 10:00 AM IST
+    - cron: "0 2 * * *"      # 07:30 AM IST
     - cron: "30 9 * * *"     # 03:00 PM IST
   workflow_dispatch:          # repo -> Actions -> manual "Run workflow" button bhi
     inputs:
@@ -39,7 +39,7 @@ jobs:
     # (ch1 ~15-25 min + ch2 ~15-25 min). Run beech me kill ho to upload
     # ke baad log likhne ka mauka hi nahi milta (wahi duplicate uploads ka
     # reason tha)
-    timeout-minutes: 75
+    timeout-minutes: 110
     env:
       GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
       GEMINI_API_KEY_2:    ${{ secrets.GEMINI_API_KEY_2 }}
