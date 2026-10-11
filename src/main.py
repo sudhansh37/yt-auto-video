@@ -300,7 +300,7 @@ def main():
     desc = str(analysis["description"]).strip()
     hashtags = analysis.get("hashtags") or []
     if hashtags:
-        desc = desc + "\n\n" + " ".join:hashtags[:12])
+        desc = desc + "\n\n" + " ".join(hashtags[:12])
 
     # Tags: Gemini ke per-video (topic-specific) tags + config ke base tags
     # (order-preserving unique). YouTube total ~500 chars limit rakhta hai.
