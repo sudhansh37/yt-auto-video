@@ -1,0 +1,49 @@
+# Har ghante YouTube cookies check karta hai. Expire/missing hone par GitHub
+# issue kholta hai (assigned to owner -> GitHub mail bhejta hai). Status
+# data/cookie_status.json me jaata hai, jise agent cron Gmail pe mail karta hai.
+name: cookie-check
+
+on:
+  schedule:
+    - cron: "5 * * * *"     # har ghante (minute 5 pe)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: cookie-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cookies check karo
+        id: chk
+        env:
+          YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
+        run: python src/check_cookies.py
+      - name: Status file save karo
+        if: always()
+        run: |
+          git config user.name "cookie-bot"
+          git config user.email "actions@github.com"
+          git add data/cookie_status.json || true
+          git commit -m "cookie status ${{ steps.chk.outputs.expired }}" || true
+          git pull --rebase --autostash || true
+          git push || true
+      - name: Expire hone par issue kholo
+        if: steps.chk.outputs.expired == 'yes'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "YouTube cookies expire ho gaye - re-export karo" \
+            --body "Cookie check fail hua: ${{ steps.chk.outputs.reason }}
+
+Kya karna hai: youtube.com se cookies.txt dobara export karo (Netscape format) aur YOUTUBE_COOKIES secret update kar do." \
+            --assignee sudhansh37 || true
