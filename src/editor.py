@@ -452,12 +452,14 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
     vf = (
         # 1. video thodi tez (speed)
         f"setpts=PTS/{speed},"
+        # fps=30 yahin (heavy scale se PEHLE) - source 60fps ho to 60fps ke
+        # saare frames par lanczos upscale karne se bachte hain (kaam ~2x kam).
+        f"fps={FPS},"
         # 2. upscale (zoom ke liye - 1.30x, resample-free)
         f"scale={BIG_W}:{BIG_H}:force_original_aspect_ratio=increase:flags=lanczos,"
         # 3. CROP: TOP se anchor (y=0) - upar ka content safe, neeche ka
         #    hissa (jahan English caption hota hai) kat jata hai
         f"crop={BIG_W}:{BIG_H}:0:0,"
-        f"fps={FPS},"
         # 4. zoom / pan effect
         f"{_zoompan(variant, total_frames, BAND_W, BAND_H, zoom_amount)},"
         # 5. color grade: vibrant + punchy + thoda bright
@@ -582,5 +584,5 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
         "-shortest",
         str(out_path),
     ]
-    _run(cmd, timeout=1500)   # render max 25 min (hang se bachav)
+    _run(cmd, timeout=2100)   # render max 35 min (1500s bahut tight tha)
     return out_path
