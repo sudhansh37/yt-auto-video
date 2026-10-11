@@ -43,7 +43,5 @@ jobs:
         run: |
           gh issue create \
             --title "YouTube cookies expire ho gaye - re-export karo" \
-            --body "Cookie check fail hua: ${{ steps.chk.outputs.reason }}
-
-Kya karna hai: youtube.com se cookies.txt dobara export karo (Netscape format) aur YOUTUBE_COOKIES secret update kar do." \
+            --body "Cookie check fail hua. youtube.com se cookies.txt dobara export karo (Netscape format) aur YOUTUBE_COOKIES secret update kar do. Detail data/cookie_status.json me hai." \
             --assignee sudhansh37 || true
