@@ -494,8 +494,11 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
         parts = []
         if _has_filter("cas"):
             parts.append(f"cas=strength={effects_cfg.get('lowres_cas', 0.6)}")
-        parts.append(f"unsharp=7:7:{effects_cfg.get('lowres_sharpen', 1.2)}")
-        vf += ",".join(parts) + ","
+        # NOTE: pehle yahan ek extra unsharp=7:7 bhi tha. Ab hata diya - base
+        # chain ka unsharp=5:5 + ye cas kaafi hai, aur teen sharpen passes
+        # (5:5 + cas + 7:7) sirf CPU/waqt khaate the (render 25min+ ki ek wajah).
+        if parts:
+            vf += ",".join(parts) + ","
 
     # 7.5 video ke UPAR colourful headline (bold + outline + emoji)
     headline_png = None

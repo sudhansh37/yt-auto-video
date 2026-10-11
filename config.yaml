@@ -101,7 +101,7 @@ effects:
   # ---- VIDEO QUALITY (MAX) ----
   crf: 13              # x264 quality - JITNA KAM, UTNI BEHTAR (0 = lossless,
                        # 13 = near-lossless, 18 = high, 23 = default)
-  preset: "slow"       # x264 speed/quality - slow = behtar quality (medium =
+  preset: "medium"       # x264 speed/quality - slow = behtar quality (medium =
                        # default, veryslow = aur behtar par bahut dheema)
   audio_bitrate: "256k"  # awaaz ki quality (128k normal, 256k high)
   # ---- LOW-RES AUTO-ENHANCE ----
