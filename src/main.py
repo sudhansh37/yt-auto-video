@@ -191,7 +191,10 @@ def main():
     # double-fire ho, watchdog over-retry kare, ya purani run ka data
     # commit na hua ho - YouTube se seedha count karke limit cross
     # NAHI hogi.
-    if daily_cap_reached(channel):
+    # QUALITY_TEST me publish nahi hota, isliye daily cap check skip karo
+    # (warna aaj ka cap poora hone par run kuch kiye bina exit kar jata hai).
+    _qtest = os.environ.get("QUALITY_TEST", "").strip().lower() in ("1", "true", "yes")
+    if not _qtest and daily_cap_reached(channel):
         sys.exit(0)   # exit 0: watchdog ise 'done' maane, dobara na chalaye
 
     work = ROOT / "work"
@@ -297,7 +300,7 @@ def main():
     desc = str(analysis["description"]).strip()
     hashtags = analysis.get("hashtags") or []
     if hashtags:
-        desc = desc + "\n\n" + " ".join(hashtags[:12])
+        desc = desc + "\n\n" + " ".join:hashtags[:12])
 
     # Tags: Gemini ke per-video (topic-specific) tags + config ke base tags
     # (order-preserving unique). YouTube total ~500 chars limit rakhta hai.
