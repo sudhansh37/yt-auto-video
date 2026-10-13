@@ -37,6 +37,7 @@ Usage:
 import json
 import os
 import random
+import re
 import sys
 from datetime import date, datetime
 from pathlib import Path
@@ -140,11 +141,30 @@ def list_drive_videos():
     return videos
 
 
+def _ascii_safe_name(name):
+    """Filename ko ASCII-safe banao (emoji/non-ASCII hata do).
+
+    Gemini Files API upload ke waqt filename HTTP header me jaata hai - usme
+    emoji/non-ASCII hone par "'ascii' codec can't encode character" crash hota
+    hai. Sirf [A-Za-z0-9._-] rakho, baaki sab '_' kar do (suffix preserve).
+    """
+    stem = Path(name).stem
+    suffix = Path(name).suffix
+    safe_stem = re.sub(r"[^A-Za-z0-9._-]+", "_", stem).strip("_") or "video"
+    safe_suffix = re.sub(r"[^A-Za-z0-9.]+", "", suffix) or ".mp4"
+    return safe_stem + safe_suffix
+
+
 def download_drive_file(entry, work):
-    """Ek Drive file ko locally download karo (gdown, no API key)."""
+    """Ek Drive file ko locally download karo (gdown, no API key).
+
+    File ko ASCII-safe naam pe rakhte hain - original naam me emoji ho sakta
+    hai, aur wahi naam Gemini Files API upload pe ascii codec error deta hai.
+    Original naam sirf logging ke liye use hota hai (process_one me).
+    """
     import gdown
 
-    dest = work / Path(entry.path).name
+    dest = work / _ascii_safe_name(Path(entry.path).name)
     gdown.download(id=entry.id, output=str(dest), quiet=True, use_cookies=False)
     if not dest.exists() or dest.stat().st_size < 10_000:
         raise RuntimeError(
@@ -240,6 +260,13 @@ def process_one(entry, cfg, channel, work, done):
         revert_pending_publish(channel)
         raise
 
+    # id SIRF tabhi done-list me add karo jab upload ne sach me video id di ho.
+    # (kisi bhi fail/adhoora upload par add NAHI hota - agli run me dobara try.)
+    if not yt_id:
+        raise RuntimeError(
+            "Upload ne video id nahi di - drive_done me add nahi kar rahe "
+            "(agli run me dobara try hoga)."
+        )
     confirm_pending_publish(yt_id, channel)
     mark_done(done, entry.id, name, yt_id)
     print(f"  Upload ho gaya -> https://youtu.be/{yt_id}  (title: {title})")
