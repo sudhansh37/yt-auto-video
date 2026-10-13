@@ -83,16 +83,23 @@ effects:
   # Zoom/pan kitna strong ho (0.15 = halka, 0.28 = clearly visible, 0.40 = bahut zyada)
   zoom_amount: 0.30
   # Color grade (brightness/contrast/exposure badhaye)
-  saturation: 1.28     # vibrant colors
-  contrast: 1.20       # punchy blacks
-  brightness: 0.08     # thoda bright
+  saturation: 1.36     # vibrant colors
+  contrast: 1.25       # punchy blacks
+  brightness: 0.14     # thoda bright
   exposure: 0.05       # halka exposure boost (0 = off)
-  sharpen: 1.0         # sharpness / crisp look (0 = band, 1.5 = bahut sharp)
+  sharpen: 1.3         # sharpness / crisp look (0 = band, 1.5 = bahut sharp)
   video_speed: 1.12    # video thodi tez (1.0 = normal, 1.3 = bahut tez)
-  # ---- LOOK (background + red line - screenshot jaisa) ----
+  # ---- LOOK (background + headline - screenshot jaisa) ----
   canvas_color: "black"       # background (upar/neeche ka area)
-  border_color: "red"         # video aur background ke beech ki patli line
-  border_width: 4             # line ki thickness (pixels)
+  # headline_style: "banner" -> sabse upar MOTA SOLID colour banner (poori
+  #   width) + uske upar YELLOW bold ITALIC UPPERCASE headline (screenshot
+  #   jaisa). "line" -> purana patla red line + transparent headline.
+  headline_style: "banner"
+  headline_banner_color: "red"  # banner ka rang (filled bar)
+  headline_banner_h: 192        # banner ki height, 1080-wide band ke hisaab se
+                                # (frame width ke saath scale hoti hai)
+  border_color: "red"         # "line" style me video aur background ke beech line
+  border_width: 4             # line ki thickness (pixels) - sirf "line" style
   border_top: true            # line video ke UPAR (screenshot jaisa)
   border_bottom: false        # neeche bhi chahiye to true kar do
   overlay_text_color: "yellow"  # headline ka colour (screenshot jaisa)
@@ -109,7 +116,7 @@ effects:
   # automatic crisp 1080p ban jata hai - CAS sharpening + extra unsharp.
   enhance_lowres: true   # auto-enhance on/off
   lowres_threshold: 1080 # is width se kam hone par enhance chalta hai
-  lowres_cas: 0.6        # contrast-adaptive sharpening (0 = off, 1 = max)
+  lowres_cas: 0.8        # contrast-adaptive sharpening (0 = off, 1 = max)
   lowres_sharpen: 1.2    # low-res sources ke liye extra unsharp
   bgm_volume: 0.22     # background music volume (user: 20-25%). 0 = band
                        # NOTE: original English audio kabhi mix nahi hota -

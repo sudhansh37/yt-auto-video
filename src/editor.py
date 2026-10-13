@@ -302,40 +302,143 @@ def _slow_music_source():
     return f"aevalsrc='{expr}':s=44100"
 
 
-def _top_text_filters(text, workdir, color="yellow", border=4,
-                      outline="black"):
-    """FALLBACK: drawtext se headline (jab PIL/emoji font na ho).
+def _find_italic_font(text=""):
+    """Bold ITALIC/OBLIQUE font dhoondo (headline ke liye). Na mile to None.
 
-    Bold + outline look (screenshot jaisa). Emoji nahi aata - isliye jab
-    possible ho to _headline_png() use hota hai.
+    Italic font mile to text seedha usse render hota hai, warna _shear_italic()
+    se slant diya jata hai (dono raste screenshot-jaisa italic dete hain).
     """
-    text = " ".join(str(text).split())[:48]
-    if not text:
-        return ""
-    font = _find_caption_font(text)
-    size = 54 if len(text) <= 26 else (46 if len(text) <= 34 else 38)
-    tf = workdir / "top_text.txt"
-    tf.write_text(text, encoding="utf-8")
-    return (
-        f"drawtext=fontfile={font}:textfile={tf.as_posix()}"
-        f":fontcolor={color}:fontsize={size}:x=(w-text_w)/2:y=(240-text_h)/2"
-        f":borderw={int(border)}:bordercolor={outline}"
-    )
+    if _has_devanagari(text):
+        cands = ["/usr/share/fonts/truetype/noto/NotoSansDevanagari-Bold.ttf"]
+        pats = ("/usr/share/fonts/**/*Devanagari*Bold*.ttf",)
+    else:
+        cands = [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-BoldOblique.ttf",
+            "/usr/share/fonts/truetype/noto/NotoSans-BoldItalic.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-BoldItalic.ttf",
+        ]
+        pats = ("/usr/share/fonts/**/*BoldOblique*.ttf",
+                "/usr/share/fonts/**/*BoldItalic*.ttf",
+                "/usr/share/fonts/**/*Oblique*.ttf",
+                "/usr/share/fonts/**/*Italic*.ttf")
+    for f in cands:
+        if Path(f).exists():
+            return f
+    import glob
+    for pat in pats:
+        hits = sorted(glob.glob(pat, recursive=True))
+        if hits:
+            return hits[0]
+    return None
 
 
-def _headline_png(text, workdir, color="yellow", outline="black",
-                  fontsize=64, max_width=1000):
-    """Headline ko transparent PNG me render karo (PIL) - COLOUR EMOJI ke saath.
+def _shear_italic(img, k=0.20):
+    """RGBA image ko italic slant do (upar ka hissa right ki taraf jhuka).
 
-    ffmpeg drawtext colour emoji nahi dikhata (box aa jata hai), isliye
-    headline PIL se image me banti hai aur ffmpeg overlay se lagti hai.
-    Yellow bold text + black outline (screenshot jaisa) + emoji.
-    PIL/emoji font na mile to None return hota hai (drawtext fallback chalta hai).
+    Jab koi italic/oblique font file na mile to isse bold text ko italic
+    banate hain (screenshot jaisa).
     """
+    from PIL import Image
+    w, h = img.size
+    new_w = w + int(k * h) + 4
+    # output(x,y) ko input(x + k*y - k*h, y) se lete hain -> top right shift
+    return img.transform((new_w, h), Image.AFFINE, (1, k, -k * h, 0, 1, 0),
+                         resample=Image.BICUBIC, fill=0)
+
+
+def _render_emoji(emoji, target):
+    """Colour emoji ka RGBA image (target px) - NotoColorEmoji se. Warna None.
+
+    Wahi logic jo pehle _headline_png() me tha (colour emoji ke liye).
+    """
+    if not emoji:
+        return None
     try:
         import glob as _glob
 
         from PIL import Image, ImageDraw, ImageFont
+    except Exception:  # noqa: BLE001
+        return None
+    efont = None
+    cand = [os.environ.get("EMOJI_FONT") or "",
+            "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",
+            "/usr/share/fonts/**/NotoColorEmoji.ttf"]
+    for pat in cand:
+        if not pat:
+            continue
+        hits = [pat] if Path(pat).exists() else sorted(
+            _glob.glob(pat, recursive=True))
+        if hits:
+            try:
+                efont = ImageFont.truetype(hits[0], 109)
+            except Exception:  # noqa: BLE001
+                efont = None
+            break
+    if efont is None:
+        return None
+    try:
+        eimg = Image.new("RGBA", (260, 260), (0, 0, 0, 0))
+        ImageDraw.Draw(eimg).text((20, 20), emoji, font=efont,
+                                  embedded_color=True)
+        eimg = eimg.crop(eimg.getbbox())
+        return eimg.resize((target, target), Image.LANCZOS)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _top_text_filters(text, workdir, color="yellow", border=4,
+                      outline="black", banner=True, banner_color="red",
+                      banner_h=192):
+    """FALLBACK: drawtext se headline (jab PIL/emoji font na ho).
+
+    banner=True -> sabse upar MOTA SOLID colour banner (drawbox) + uske upar
+    YELLOW italic UPPERCASE text (screenshot jaisa). Emoji nahi aata - isliye
+    jab possible ho to _headline_png() use hota hai.
+    """
+    text = " ".join(str(text).split())[:48].upper()
+    if not text:
+        return ""
+    # italic font mile to use karo (drawtext me italic option nahi hota)
+    font = _find_italic_font(text) or _find_caption_font(text)
+    bh = int(banner_h)
+    size = max(24, int(bh * 0.55))
+    if len(text) > 26:
+        size = int(size * 0.78)
+    tf = workdir / "top_text.txt"
+    tf.write_text(text, encoding="utf-8")
+    filters = []
+    if banner:
+        filters.append(f"drawbox=x=0:y=0:w=iw:h={bh}:"
+                       f"color={banner_color}@1:t=fill")
+        y = f"({bh}-text_h)/2"
+    else:
+        y = "(240-text_h)/2"
+    filters.append(
+        f"drawtext=fontfile={font}:textfile={tf.as_posix()}"
+        f":fontcolor={color}:fontsize={size}:x=(w-text_w)/2:y={y}"
+        f":borderw={int(border)}:bordercolor={outline}"
+    )
+    return ",".join(filters)
+
+
+def _headline_png(text, workdir, color="yellow", outline="black",
+                  fontsize=64, max_width=1000,
+                  banner=False, banner_color="red", banner_h=192,
+                  banner_w=None):
+    """Headline ko PNG me render karo (PIL) - COLOUR EMOJI ke saath.
+
+    ffmpeg drawtext colour emoji nahi dikhata (box aa jata hai), isliye
+    headline PIL se image me banti hai aur ffmpeg overlay se lagti hai.
+
+    banner=True  -> poori width ka MOTA SOLID colour banner + uske UPAR
+                    YELLOW bold ITALIC UPPERCASE text + black outline +
+                    emoji (screenshot jaisa). Yahan W = banner_w (frame width).
+    banner=False -> purana transparent text-only PNG (yellow bold + outline).
+    PIL/emoji font na mile to None return hota hai (drawtext fallback chalta hai).
+    """
+    try:
+        from PIL import Image, ImageColor, ImageDraw, ImageFont
     except Exception:  # noqa: BLE001
         return None
 
@@ -350,51 +453,73 @@ def _headline_png(text, workdir, color="yellow", outline="black",
     main, emoji = text[:i].rstrip(), text[i:].strip()
     if not main:
         main, emoji = text, ""
+    main = main.upper()          # UPPERCASE (screenshot jaisa)
 
+    # bold font + italic variant (mile to). Na mile to shear se italic banega.
+    italic_font = _find_italic_font(main or text)
+    font_path = italic_font or _find_caption_font(main or text)
+    shear = italic_font is None
+
+    if banner:
+        W = int(banner_w or max_width)
+        H = max(40, int(banner_h))
+        # font size: banner ke andar text (+emoji) fit hone tak chhota karo
+        fs = max(14, int(H * 0.62))
+        tf, bb, tw, th, eimg = None, (0, 0, 0, 0), 0, 0, None
+        stroke = 3
+        while fs >= 14:
+            try:
+                tf = ImageFont.truetype(font_path, fs)
+            except Exception:  # noqa: BLE001
+                return None
+            stroke = max(3, int(fs * 0.055))
+            probe = ImageDraw.Draw(Image.new("RGBA", (8, 8)))
+            bb = probe.textbbox((0, 0), main, font=tf, stroke_width=stroke)
+            tw, th = bb[2] - bb[0], bb[3] - bb[1]
+            eimg = _render_emoji(emoji, int(fs * 1.0))
+            ew = (eimg.width + int(fs * 0.3)) if eimg is not None else 0
+            if tw + ew <= W * 0.94 and th <= H * 0.86:
+                break
+            fs -= 4
+        # text layer (transparent) -> italic slant
+        layer = Image.new("RGBA", (tw + 2 * stroke + 6, th + 2 * stroke + 6),
+                          (0, 0, 0, 0))
+        ImageDraw.Draw(layer).text((stroke + 3 - bb[0], stroke + 3 - bb[1]),
+                                   main, font=tf, fill=color,
+                                   stroke_width=stroke, stroke_fill=outline)
+        if shear:
+            layer = _shear_italic(layer)
+        # solid banner canvas + upar text/emoji (vertically centered)
+        try:
+            bg = ImageColor.getrgb(banner_color)
+        except Exception:  # noqa: BLE001
+            bg = (255, 0, 0)
+        img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        ImageDraw.Draw(img).rectangle([0, 0, W - 1, H - 1], fill=bg)
+        gap = int(fs * 0.3)
+        content_w = layer.width + ((eimg.width + gap) if eimg is not None else 0)
+        x0 = max(0, (W - content_w) // 2)
+        img.alpha_composite(layer, (x0, max(0, (H - layer.height) // 2)))
+        if eimg is not None:
+            img.alpha_composite(eimg, (x0 + layer.width + gap,
+                                       max(0, (H - eimg.height) // 2)))
+        out = workdir / "headline.png"
+        img.save(out)
+        return out
+
+    # ---- purana (transparent text-only) behaviour ----
     try:
-        tfont = ImageFont.truetype(_find_caption_font(main or text), fontsize)
+        tfont = ImageFont.truetype(font_path, fontsize)
     except Exception:  # noqa: BLE001
         return None
 
-    # colour emoji font (CI pe fonts-noto-color-emoji se aata hai)
-    efont = None
-    if emoji:
-        cand = [os.environ.get("EMOJI_FONT") or "",
-                "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",
-                "/usr/share/fonts/**/NotoColorEmoji.ttf"]
-        for pat in cand:
-            if not pat:
-                continue
-            hits = [pat] if Path(pat).exists() else sorted(
-                _glob.glob(pat, recursive=True))
-            if hits:
-                try:
-                    efont = ImageFont.truetype(hits[0], 109)
-                except Exception:  # noqa: BLE001
-                    efont = None
-                break
-    if efont is None:
-        emoji = ""          # emoji font nahi -> emoji chhod do (box na aaye)
+    eimg = _render_emoji(emoji, int(fontsize * 1.15))
+    ew = (eimg.width + 16) if eimg is not None else 0
 
     stroke = 5
-    probe = Image.new("RGBA", (10, 10))
-    d0 = ImageDraw.Draw(probe)
-    bb = d0.textbbox((0, 0), main, font=tfont, stroke_width=stroke)
+    probe = ImageDraw.Draw(Image.new("RGBA", (8, 8)))
+    bb = probe.textbbox((0, 0), main, font=tfont, stroke_width=stroke)
     tw, th = bb[2] - bb[0], bb[3] - bb[1]
-
-    eimg = None
-    ew = 0
-    if emoji:
-        try:
-            eimg = Image.new("RGBA", (260, 260), (0, 0, 0, 0))
-            ImageDraw.Draw(eimg).text((20, 20), emoji, font=efont,
-                                      embedded_color=True)
-            eimg = eimg.crop(eimg.getbbox())
-            target = int(fontsize * 1.15)
-            eimg = eimg.resize((target, target), Image.LANCZOS)
-            ew = target + 16
-        except Exception:  # noqa: BLE001
-            eimg, ew = None, 0
 
     pad = 14
     W = min(max_width, tw + ew + pad * 2)
@@ -404,7 +529,7 @@ def _headline_png(text, workdir, color="yellow", outline="black",
     dr.text((pad - bb[0], pad - bb[1]), main, font=tfont, fill=color,
             stroke_width=stroke, stroke_fill=outline)
     if eimg is not None:
-        img.paste(eimg, (pad + tw + 16, (H - eimg.height) // 2), eimg)
+        img.alpha_composite(eimg, (pad + tw + 16, (H - eimg.height) // 2))
 
     out = workdir / "headline.png"
     img.save(out)
@@ -463,19 +588,31 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
         # 4. zoom / pan effect
         f"{_zoompan(variant, total_frames, BAND_W, BAND_H, zoom_amount)},"
         # 5. color grade: vibrant + punchy + thoda bright
-        f"eq=saturation={effects_cfg.get('saturation', 1.28)}"
-        f":contrast={effects_cfg.get('contrast', 1.12)}"
-        f":brightness={effects_cfg.get('brightness', 0.04)},"
+        f"eq=saturation={effects_cfg.get('saturation', 1.36)}"
+        f":contrast={effects_cfg.get('contrast', 1.25)}"
+        f":brightness={effects_cfg.get('brightness', 0.14)},"
         # 6. sharpness (crisp look)
-        f"unsharp=5:5:{effects_cfg.get('sharpen', 1.0)},"
+        f"unsharp=5:5:{effects_cfg.get('sharpen', 1.3)},"
         # 7. background canvas (upar-neeche - default black)
         f"pad={TARGET_W}:{TARGET_H}:0:{pad_y}:{canvas},"
     )
 
+    # ---- LOOK: headline style ----
+    # "banner" (default, screenshot jaisa) -> sabse upar MOTA SOLID red banner
+    # + uske upar headline. "line" -> purana patla red line (headline uske upar).
+    headline_style = str(effects_cfg.get("headline_style", "banner")).lower()
+    banner_on = headline_style != "line"
+    banner_color = effects_cfg.get("headline_banner_color", "red")
+    banner_h_px = int(round(float(effects_cfg.get("headline_banner_h", 192))
+                            * BAND_W / 1080.0))
+
     # ---- RED LINE (video aur background ke beech, screenshot jaisa) ----
     # Poori width ki patli line band ke top edge pe. drawbox core filter hai.
+    # NOTE: banner style ON hone par ye line OFF rehti hai (warna line aur
+    # banner dono dikhte). Line sirf style "line" pe, ya jab koi headline hi
+    # na ho (us case me banner nahi banta).
     bw = int(effects_cfg.get("border_width", 4))
-    if bw > 0:
+    if bw > 0 and (not banner_on or not top_text):
         bcolor = effects_cfg.get("border_color", "red")
         if effects_cfg.get("border_top", True):
             vf += (f"drawbox=x=0:y={pad_y - bw}:w=iw:h={bw}:"
@@ -495,7 +632,7 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
     if enhance:
         parts = []
         if _has_filter("cas"):
-            parts.append(f"cas=strength={effects_cfg.get('lowres_cas', 0.6)}")
+            parts.append(f"cas=strength={effects_cfg.get('lowres_cas', 0.8)}")
         # NOTE: pehle yahan ek extra unsharp=7:7 bhi tha. Ab hata diya - base
         # chain ka unsharp=5:5 + ye cas kaafi hai, aur teen sharpen passes
         # (5:5 + cas + 7:7) sirf CPU/waqt khaate the (render 25min+ ki ek wajah).
@@ -503,13 +640,24 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
             vf += ",".join(parts) + ","
 
     # 7.5 video ke UPAR colourful headline (bold + outline + emoji)
+    # banner style -> poori width ka red banner + uske upar headline
+    # (screenshot jaisa). line style -> purana transparent text-only headline.
     headline_png = None
     if top_text:
-        headline_png = _headline_png(
-            top_text, out_path.parent,
-            effects_cfg.get("overlay_text_color", "yellow"),
-            effects_cfg.get("overlay_text_outline", "black"),
-        )
+        if banner_on:
+            headline_png = _headline_png(
+                top_text, out_path.parent,
+                effects_cfg.get("overlay_text_color", "yellow"),
+                effects_cfg.get("overlay_text_outline", "black"),
+                banner=True, banner_color=banner_color,
+                banner_h=banner_h_px, banner_w=TARGET_W,
+            )
+        else:
+            headline_png = _headline_png(
+                top_text, out_path.parent,
+                effects_cfg.get("overlay_text_color", "yellow"),
+                effects_cfg.get("overlay_text_outline", "black"),
+            )
         if headline_png is None:
             # PIL/emoji font na mila - drawtext fallback (bold + outline)
             vf += _top_text_filters(
@@ -517,6 +665,8 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
                 effects_cfg.get("overlay_text_color", "yellow"),
                 int(effects_cfg.get("overlay_text_border", 4)),
                 effects_cfg.get("overlay_text_outline", "black"),
+                banner=banner_on, banner_color=banner_color,
+                banner_h=banner_h_px,
             ) + ","
 
     # 8. time-synced captions (Hinglish ya Devanagari - font auto)
@@ -557,11 +707,14 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
     audio_bitrate = effects_cfg.get("audio_bitrate", "256k")
 
     # headline PNG hai to use overlay se lagao (colour emoji ke saath)
+    # banner style -> PNG (red banner + text) sabse UPAR (y=0) baithti hai.
+    # line style  -> purani tarah upar wale band me vertically center.
     if headline_png:
         hidx = 3 if bgm_volume > 0 else 2
+        oy = "0" if (banner_on and top_text) else f"({pad_y}-overlay_h)/2"
         vchain = (f"[0:v]{vf}[base];"
                   f"[base][{hidx}:v]overlay="
-                  f"x=(main_w-overlay_w)/2:y=({pad_y}-overlay_h)/2:format=yuv420[v]")
+                  f"x=(main_w-overlay_w)/2:y={oy}:format=yuv420[v]")
     else:
         vchain = f"[0:v]{vf}[v]"
 
