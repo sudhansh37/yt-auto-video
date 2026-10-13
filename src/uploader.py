@@ -235,3 +235,63 @@ def upload_video(video_path, title, description, tags, youtube_cfg, channel=1):
     raise RuntimeError(
         f"Upload error {put_resp.status_code}: {put_resp.text[:300]}"
     )
+
+
+def post_comment(yt_id, text, cfg, channel=1):
+    """Uploaded video pe ek top-level comment post karo (commentThreads.insert).
+
+    Wahi OAuth token/refresh flow jo upload_video use karta hai (same client
+    id/secret/refresh token, same channel mapping) - _refresh_access_token
+    reuse hota hai.
+
+    ZAROORI: comment ke liye OAuth token me 'youtube.force-ssl' scope chahiye,
+    jo upload ke 'youtube.upload' scope me NAHI hota. Agar API 403/scope error
+    de (ya koi bhi error aaye) to sirf ek saaf WARNING print hoti hai aur ye
+    function None lauta deta hai - upload ya pipeline kabhi FAIL nahi hoti.
+    """
+    try:
+        access_token = _refresh_access_token(channel)
+    except AuthError as e:
+        print(f"  [comment] WARNING: token refresh fail - comment skip "
+              f"({str(e)[:150]})")
+        return None
+
+    body = {
+        "snippet": {
+            "videoId": yt_id,
+            "topLevelComment": {
+                "snippet": {"textOriginal": text},
+            },
+        }
+    }
+    try:
+        resp = requests.post(
+            f"{API_BASE}/youtube/v3/commentThreads",
+            headers={"Authorization": f"Bearer {access_token}"},
+            params={"part": "snippet"},
+            json=body,
+            timeout=30,
+        )
+    except Exception as e:  # noqa: BLE001 - network error par bhi sirf warning
+        print(f"  [comment] WARNING: request fail - comment skip "
+              f"({str(e)[:150]})")
+        return None
+
+    if resp.status_code in (200, 201):
+        try:
+            comment_id = resp.json().get("id")
+        except Exception:  # noqa: BLE001
+            comment_id = None
+        print(f"  [comment] Comment post ho gaya (id={comment_id}).")
+        return comment_id
+
+    # 401/403 (scope/permission), 400 (comments off / invalid) - sab par sirf
+    # warning. Comment ke liye 'youtube.force-ssl' scope chahiye; agar purane
+    # refresh token me wo scope nahi hai to yahi 403 aayega.
+    print(
+        f"  [comment] WARNING: comment post nahi hua "
+        f"({resp.status_code}: {resp.text[:200]}). Upload theek hai - sirf "
+        f"comment skip kiya. (Comment ke liye OAuth token me "
+        f"'youtube.force-ssl' scope chahiye.)"
+    )
+    return None

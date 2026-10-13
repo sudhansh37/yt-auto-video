@@ -13,10 +13,16 @@ hote hain - koi copy-paste nahi.
 
 DUPLICATE PROTECTION
 --------------------
-data/drive_done.json me processed Drive file ids rakhe jaate hain.
-Jo file id pehle se list me hai, wo skip ho jaati hai. File id
-upload SUCCESS hone ke BAAD hi add hoti hai - agar run fail/bech me
-kill ho jaye to id add nahi hoti aur agli run me dobara try hota hai.
+data/drive_done.json me processed videos ka record rakha jaata hai
+(file id ke saath title + uska normalized 'norm' bhi). Do tarah se
+dedupe hota hai:
+  1) file id - jo id pehle se list me hai, wo skip ho jaati hai.
+  2) title  - agar us video ka norm-title pehle kisi entry me hai to
+     skip (chahe file id nayi ho - same title dobara upload nahi hoti).
+Entry upload SUCCESS hone ke BAAD hi add hoti hai - agar run fail/bech
+me kill ho jaye to add nahi hoti aur agli run me dobara try hota hai.
+Purani entries (jisme sirf id/name thi) backwards-compatible hain - unka
+norm name se derive ho jaata hai.
 
 DRIVE ACCESS (koi API key NAHI)
 -------------------------------
@@ -48,7 +54,12 @@ sys.path.insert(0, str(ROOT / "src"))
 from analyzer import analyze_video          # noqa: E402
 from editor import edit_video, get_duration  # noqa: E402
 from tts import synthesize                   # noqa: E402
-from uploader import AuthError, channel_configured, upload_video  # noqa: E402
+from uploader import (                          # noqa: E402
+    AuthError,
+    channel_configured,
+    post_comment,
+    upload_video,
+)
 # main.py ke helpers reuse karo (copy-paste kam se kam)
 from main import (                            # noqa: E402
     confirm_pending_publish,
@@ -101,12 +112,55 @@ def save_done(done):
     )
 
 
+def normalize_title(title):
+    """Title ko normalize karo: lowercase + non-alphanumeric hata do.
+
+    Emoji / non-ASCII strip ho jaate hain aur whitespace ek single space me
+    collapse ho jaata hai - isliye same title (chahe emoji/spacing thoda
+    alag ho) ek hi norm string deta hai.
+    """
+    return re.sub(r"[^a-z0-9]+", " ", str(title).lower()).strip()
+
+
+def _entry_norm(rec):
+    """Ek drive_done entry se uski norm-title nikalo (purani entries ke liye bhi)."""
+    if not isinstance(rec, dict):
+        return ""
+    norm = rec.get("norm")
+    if norm:
+        return str(norm)
+    # purani entry (sirf name/date/yt) - 'title' ho to seedha, warna 'name'
+    # (jo full filename tha, extension ke saath) ka stem le kar norm banao.
+    title = rec.get("title")
+    if title:
+        return normalize_title(title)
+    name = rec.get("name")
+    return normalize_title(Path(str(name)).stem) if name else ""
+
+
+def title_already_done(done, title):
+    """Ye title (norm) pehle kisi bhi entry me hai? -> True (dedupe)."""
+    norm = normalize_title(title)
+    if not norm:
+        return False
+    return any(_entry_norm(rec) == norm for rec in done.values())
+
+
 def mark_done(done, file_id, name, yt_id):
-    """Ek Drive file id ko processed mark karo (upload ke baad)."""
+    """Ek Drive file ko processed mark karo (upload ke baad).
+
+    Record me title + norm bhi rakhte hain taaki same title (nayi file id
+    ke saath dobara daali gayi ho) agli run me skip ho jaye. Purane fields
+    (name/date) backwards-compat ke liye bane rehte hain.
+    """
+    title = Path(name).stem
     done[file_id] = {
+        "id": file_id,
+        "title": title,
+        "norm": normalize_title(title),
+        "yt": yt_id,
         "name": name,
         "date": date.today().isoformat(),
-        "yt": yt_id,
     }
     save_done(done)
 
@@ -176,6 +230,25 @@ def download_drive_file(entry, work):
             f"Drive file download adhoora/khali aaya: {entry.path} (id={entry.id})"
         )
     return dest
+
+
+# ---------------------------------------------------------------------------
+# Upload ke baad related auto-comment
+# ---------------------------------------------------------------------------
+
+def _build_comment(analysis):
+    """Analysis se ek related Hinglish auto-comment banao."""
+    title = str(analysis.get("title") or "").strip()
+    desc_lines = str(analysis.get("description") or "").strip().splitlines()
+    first_line = desc_lines[0].strip() if desc_lines else ""
+    text = (
+        f"{title} 😲\n"
+        f"Aapko ye pasand aaya? Aise hi amazing facts ke liye SUBSCRIBE karo! 🔔\n"
+        f"Aapka kya lagta hai - comment me batao 👇"
+    )
+    if first_line:
+        text = f"{text}\n{first_line}"
+    return text
 
 
 # ---------------------------------------------------------------------------
@@ -276,6 +349,14 @@ def process_one(entry, cfg, channel, work, done):
     mark_done(done, entry.id, name, yt_id)
     print(f"  Upload ho gaya -> https://youtu.be/{yt_id}  (title: {title})")
 
+    # ---- upload ke baad ek related auto-comment post karo ----
+    # Comment kabhi upload/pipeline fail na kare - fail ho to sirf warning.
+    try:
+        comment_text = _build_comment(analysis)
+        post_comment(yt_id, comment_text, cfg["youtube"], channel=channel)
+    except Exception as e:  # noqa: BLE001 - comment sirf best-effort hai
+        print(f"  [comment] WARNING: comment skip ({str(e)[:150]})")
+
     # disk bachao: bade (2-3 GB) videos turant delete kar do
     for p in (src, out):
         try:
@@ -312,6 +393,18 @@ def main():
     done = load_done()
     new_videos = [v for v in videos if v.id not in done]
     print(f"Unme se {len(new_videos)} nayi (pehle process nahi hui) hain.")
+
+    # ---- title-based dedupe: same title (norm) pehle upload ho chuki ho to
+    # skip karo - chahe us video ki file id nayi ho. ----
+    fresh_videos = []
+    for v in new_videos:
+        title = Path(v.path).stem
+        print(f"  Title: {title}")
+        if title_already_done(done, title):
+            print(f"  '{title}' - title pehle upload ho chuki hai - skip")
+            continue
+        fresh_videos.append(v)
+    new_videos = fresh_videos
 
     if not new_videos:
         print("Process karne ke liye koi nayi video nahi - bas, exit.")
