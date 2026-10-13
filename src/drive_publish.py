@@ -63,6 +63,11 @@ DEFAULT_DRIVE_FOLDER_URL = (
 )
 DRIVE_FOLDER_URL = os.environ.get("DRIVE_FOLDER_URL", DEFAULT_DRIVE_FOLDER_URL).strip()
 
+# Ek run me max kitni videos process/upload karni hain (default 1).
+# Isse ek hi run me sirf ek video upload hoti hai - baaki agli run me.
+# env MAX_PER_RUN se override ho sakta hai (default 1).
+MAX_PER_RUN = int(os.environ.get("MAX_PER_RUN", "1"))
+
 # Processed Drive file ids yahan track hote hain (git commit hota hai).
 DONE_PATH = ROOT / "data" / "drive_done.json"
 
@@ -313,7 +318,14 @@ def main():
         return
 
     results = []
+    attempted = 0
     for entry in new_videos:
+        # Ek run me sirf MAX_PER_RUN video (default 1). Limit pahunch gaye to
+        # baaki videos agli run me - workflow FAIL nahi hota (exit 0).
+        if attempted >= MAX_PER_RUN:
+            print(f"  MAX_PER_RUN={MAX_PER_RUN} pahunch gaya - baaki videos agli run me.")
+            break
+        attempted += 1
         name = Path(entry.path).name
         try:
             yt_id, title = process_one(entry, cfg, channel, work, done)
@@ -338,6 +350,8 @@ def main():
         else:
             print(f"  [FAIL] {name}  ->  {info}")
     print(f"Total: {ok}/{len(results)} upload ho gayi.")
+    remaining = len(new_videos) - attempted
+    print(f"Is run me {attempted} video process hui, {remaining} baaki hain (agli run me).")
     if ok < len(results):
         # koi video fail hui - non-zero exit (workflow red ho, par
         # drive_done.json phir bhi commit hoga kyunki step if: always())

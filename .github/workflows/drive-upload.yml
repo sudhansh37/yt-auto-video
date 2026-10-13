@@ -24,7 +24,7 @@ permissions:
   contents: write   # data/drive_done.json commit karne ke liye
 
 concurrency:
-  group: drive-upload
+  group: publish-short
   cancel-in-progress: false
 
 jobs:
