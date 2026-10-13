@@ -1,0 +1,82 @@
+# Drive -> YouTube publisher (MANUAL)
+#
+# Apni videos (public Google Drive folder) uthao -> existing pipeline se
+# Hindi script + Gemini Hindi TTS + edit karo -> YouTube (channel 1) pe
+# upload karo.
+#
+# SIRF MANUAL: koi schedule nahi. GitHub -> Actions -> drive-upload ->
+# "Run workflow" button dabao.
+#
+# Duplicate safety: processed Drive file ids data/drive_done.json me
+# track hote hain (har run ke baad commit hote hain) - ek hi video
+# dobara upload NAHI hoti.
+#
+# NOTE: Drive folder PUBLIC hona chahiye ("Anyone with the link").
+# Koi naya secret nahi - sab daily.yml wale secrets hi use hote hain.
+
+name: drive-upload
+
+on:
+  # sirf manual - koi schedule NAHI
+  workflow_dispatch:
+
+permissions:
+  contents: write   # data/drive_done.json commit karne ke liye
+
+concurrency:
+  group: drive-upload
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    # bade (2-3 GB) videos ke liye 5 ghante ka margin
+    timeout-minutes: 300
+    env:
+      GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_API_KEY_2:    ${{ secrets.GEMINI_API_KEY_2 }}
+      YT_CLIENT_ID:        ${{ secrets.YT_CLIENT_ID }}
+      YT_CLIENT_SECRET:    ${{ secrets.YT_CLIENT_SECRET }}
+      YT_REFRESH_TOKEN:    ${{ secrets.YT_REFRESH_TOKEN }}
+      YOUTUBE_COOKIES:     ${{ secrets.YOUTUBE_COOKIES }}
+      HF_TOKEN:            ${{ secrets.HF_TOKEN }}
+      ttsfree:             ${{ secrets.ttsfree }}
+      VOICE: hi-IN-MadhurNeural
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Deno (yt-dlp ka JS runtime - bina iske YouTube formats missing hote hain)
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Install FFmpeg + fonts (captions ke liye)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-noto-core fonts-dejavu-core fonts-noto-color-emoji
+
+      - name: Install Python packages
+        run: pip install --quiet -r requirements.txt gdown
+
+      - name: Run drive publisher - Channel 1
+        run: python src/drive_publish.py 1
+
+      - name: Save drive done list
+        # always() = koi video fail ho tab bhi jo ids process hui hain
+        # wo commit ho jayein (warna agli run me wo dobara try hongi).
+        if: always()
+        run: |
+          git config user.name  "shorts-bot"
+          git config user.email "action@github.com"
+          git add data/drive_done.json
+          if git diff --cached --quiet; then
+            echo "No change - skip commit"
+          else
+            git commit -m "chore: mark drive video as used [skip ci]"
+            git pull --rebase origin main
+            git push
+          fi
