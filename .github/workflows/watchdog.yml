@@ -2,7 +2,7 @@
 #
 # GitHub Actions ke crons kabhi-kabhi high load me DROP ho jaate hain.
 # Ye workflow har 30 minute me check karta hai:
-#   - aaj (IST) ke publish slots (10:00 / 15:00) me se koi miss hua?
+#   - aaj (IST) ka publish slot (15:00) miss hua?
 #     (data/publish_log.json + data/history.json dono se confirm)
 #   - haan -> pipeline chala kar video publish kar deta hai
 #   - nahi -> 10 second me no-op ke saath nikal jaata hai (heavy setup skip)

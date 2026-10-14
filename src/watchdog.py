@@ -6,7 +6,7 @@ hain (kabhi 50+ min late bhi). Ye watchdog us problem ka ilaaj hai:
 
   - Har 30 minute (watchdog.yml ka cron) ye script check karti hai:
     aaj (IST) ke kaunse publish slots ka time nikal chuka hai?
-      SLOTS = 10:00, 15:00 IST  (din me 2 videos)
+      SLOTS = 15:00 IST  (din me 1 video, sirf shaam)
     aur unme se kitne cover ho chuke hain?
   - Jo slot GRACE_MIN (45 min) tak me bhi cover nahi hua - matlab
     scheduled run drop hua tha - watchdog wahi pipeline chala kar video
@@ -52,7 +52,8 @@ ROOT = Path(__file__).resolve().parent.parent
 IST = ZoneInfo("Asia/Kolkata")
 
 # din ke publish slots (IST) - daily.yml ke crons se match karte hain
-SLOTS = ["10:00", "15:00"]
+# (ab sirf shaam 3:00 PM; subah ka slot hata diya gaya hai)
+SLOTS = ["15:00"]
 GRACE_MIN = 45   # slot ke itne min baad tak video aani chahiye
 EARLY_MIN = 5    # slot se thoda pehle wali video bhi cover maan li jaati hai
 

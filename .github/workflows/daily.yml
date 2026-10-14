@@ -1,7 +1,6 @@
 # Hindi Shorts Bot - scheduled publisher (Zack D. Films -> Hindi Shorts)
 #
-# Din me SIRF 2 videos PER CHANNEL:
-#   10:00 AM IST = 04:30 UTC
+# Din me SIRF 1 video PER CHANNEL, sirf SHAAM:
 #   03:00 PM IST = 09:30 UTC
 # TIME CHANGE KARNA HO TO niche cron lines edit karo (UTC me hota hai,
 # IST se 5 ghante 30 minute peeche).
@@ -13,11 +12,10 @@
 name: publish-short
 
 on:
-  # SCHEDULE BAND HAI - ab koi automatic upload nahi hota. Sirf manual:
-  # GitHub -> Actions -> publish-short -> "Run workflow" button.
-  # schedule:
-  #   - cron: "0 2 * * *"      # 07:30 AM IST
-  #   - cron: "30 9 * * *"     # 03:00 PM IST
+  # Roz SIRF 1 video, sirf SHAAM 3:00 PM IST (09:30 UTC) pe.
+  # Subah ka slot jaan-boojh kar hata diya gaya hai.
+  schedule:
+    - cron: "30 9 * * *"     # 03:00 PM IST = 09:30 UTC
   workflow_dispatch:          # repo -> Actions -> manual "Run workflow" button
     inputs:
       mode:
@@ -67,10 +65,13 @@ jobs:
       HF_TOKEN:            ${{ secrets.HF_TOKEN }}
       ttsfree:             ${{ secrets.ttsfree }}
       VOICE: hi-IN-MadhurNeural
-      # true (default) = publish NAHI, sirf video banake artifact me daalo
-      DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
+      # NOTE: schedule wali run me github.event.inputs KHAALI hota hai -
+      # isliye fallback 'false'. (Pehle 'true' tha, jiski wajah se scheduled
+      # run DRY_RUN ban jaati thi aur YouTube pe upload hi nahi hota tha.)
+      # Manual "Run workflow" ka default abhi bhi true rehta hai (safe).
+      DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
       # true = Gemini/TTS skip, sirf download + edit (original English audio)
-      QUALITY_TEST: ${{ github.event.inputs.quality_test || 'true' }}
+      QUALITY_TEST: ${{ github.event.inputs.quality_test || 'false' }}
     steps:
       - uses: actions/checkout@v4
 

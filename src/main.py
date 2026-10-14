@@ -1,7 +1,7 @@
 """
 Hindi Shorts Bot - main pipeline
 ================================
-1. HARD DAILY CAP: aaj ki 2 videos (YouTube API se verified) ho gayi to STOP
+1. HARD DAILY CAP: aaj ki video (YouTube API se verified) ho gayi to STOP
 2. Source channel se ek short pick karo (latest / random / mix) - duplicates skip
 3. yt-dlp se download karo (full HD vertical)
 4. Gemini se video analysis -> Hindi script + Hinglish captions + title + description
@@ -47,7 +47,7 @@ from uploader import channel_configured, upload_video, count_today_uploads  # no
 from uploader import AuthError                # noqa: E402
 
 IST = ZoneInfo("Asia/Kolkata")
-MAX_PER_DAY = 2   # har channel ke liye SIRF itni videos (10:00 / 15:00 slots)
+MAX_PER_DAY = 2   # safety ceiling (ab sirf 15:00 slot chalta hai)
 
 
 def load_config():
@@ -68,7 +68,7 @@ def log_publish(yt_id, channel=1):
 
     Entry me 'ch' field se pata chalta hai kaunse channel ki video hai.
     watchdog har 30 min me isse padh kar per-channel check karta hai ki
-    aaj ke slots (10:00 / 15:00 IST) pe video publish hui ya nahi.
+    aaj ke slot (15:00 IST) pe video publish hui ya nahi.
     """
     log_path = ROOT / "data" / "publish_log.json"
     log_path.parent.mkdir(exist_ok=True)
@@ -152,7 +152,7 @@ def daily_cap_reached(channel=1):
               f"upload ho chuki hain.")
         if yt_count >= MAX_PER_DAY:
             print(f"[cap] ch{channel}: YouTube limit {MAX_PER_DAY} poori - "
-                  f"aaj bas, kal 10 AM pe fir se.")
+                  f"aaj bas, kal shaam 3 PM pe fir se.")
             return True
     except Exception as e:  # noqa: BLE001 - API fail ho to local pe chalte hain
         print(f"[cap] ch{channel}: WARNING: YouTube count nahi ho paya ({e}) - "
@@ -188,7 +188,7 @@ def main():
         sys.exit(0)
 
     # ---- 0. HARD DAILY CAP (is channel ke liye) ----
-    # Din me SIRF 2 videos is channel pe (10 AM + 3 PM). Chahe cron
+    # Din me SIRF 1 video is channel pe (sirf shaam 3 PM). Chahe cron
     # double-fire ho, watchdog over-retry kare, ya purani run ka data
     # commit na hua ho - YouTube se seedha count karke limit cross
     # NAHI hogi.
