@@ -588,11 +588,11 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
         # 4. zoom / pan effect
         f"{_zoompan(variant, total_frames, BAND_W, BAND_H, zoom_amount)},"
         # 5. color grade: vibrant + punchy + thoda bright
-        f"eq=saturation={effects_cfg.get('saturation', 1.36)}"
-        f":contrast={effects_cfg.get('contrast', 1.25)}"
-        f":brightness={effects_cfg.get('brightness', 0.14)},"
+        f"eq=saturation={effects_cfg.get('saturation', 1.28)}"
+        f":contrast={effects_cfg.get('contrast', 1.12)}"
+        f":brightness={effects_cfg.get('brightness', 0.04)},"
         # 6. sharpness (crisp look)
-        f"unsharp=5:5:{effects_cfg.get('sharpen', 1.3)},"
+        f"unsharp=5:5:{effects_cfg.get('sharpen', 1.0)},"
         # 7. background canvas (upar-neeche - default black)
         f"pad={TARGET_W}:{TARGET_H}:0:{pad_y}:{canvas},"
     )
@@ -632,7 +632,7 @@ def edit_video(src, audio, out_path, variant, effects_cfg, script=None,
     if enhance:
         parts = []
         if _has_filter("cas"):
-            parts.append(f"cas=strength={effects_cfg.get('lowres_cas', 0.8)}")
+            parts.append(f"cas=strength={effects_cfg.get('lowres_cas', 0.6)}")
         # NOTE: pehle yahan ek extra unsharp=7:7 bhi tha. Ab hata diya - base
         # chain ka unsharp=5:5 + ye cas kaafi hai, aur teen sharpen passes
         # (5:5 + cas + 7:7) sirf CPU/waqt khaate the (render 25min+ ki ek wajah).
